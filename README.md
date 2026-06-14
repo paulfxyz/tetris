@@ -4,7 +4,7 @@
 
 **Play it now → [tetris.rocks](https://tetris.rocks/)**
 
-[![Version](https://img.shields.io/badge/version-1.5.4-blue.svg)](https://github.com/paulfxyz/tetris/releases/tag/v1.5.4)
+[![Version](https://img.shields.io/badge/version-1.5.5-blue.svg)](https://github.com/paulfxyz/tetris/releases/tag/v1.5.5)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![No deps](https://img.shields.io/badge/frontend-zero%20deps-brightgreen)](#)
 [![Offline ready](https://img.shields.io/badge/PWA-offline%20ready-success)](#)

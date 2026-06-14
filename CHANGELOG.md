@@ -2,6 +2,11 @@
 
 All notable changes to **tetris** will be documented here. Format inspired by [Keep a Changelog](https://keepachangelog.com/), versioning follows [SemVer](https://semver.org/).
 
+## [1.5.5] — 2026-06-14
+
+### Changed
+- **Mobile vpad centered vertically.** After landing v1.5.4 with the vpad pinned to the bottom edge, mid-screen actually reads better: the canvas is now pinned to the bottom of the frame, so the bottom playfield rows live in the natural "action zone," and a d-pad floating at viewport center sits exactly where the thumb naturally rests. Switched from `top: calc(100dvh - h - safe-area)` to `top: 50%; transform: translate(-50%, -50%)`. Bonus: the viewport center is the viewport center on every iOS browser, so the pad no longer cares whether Safari or Chrome/Comet is doing the painting.
+
 ## [1.5.4] — 2026-06-14
 
 ### Fixed
