@@ -2,6 +2,17 @@
 
 All notable changes to **tetris** will be documented here. Format inspired by [Keep a Changelog](https://keepachangelog.com/), versioning follows [SemVer](https://semver.org/).
 
+## [1.2.2] — 2026-06-14
+
+### Fixed
+- **Sustainable zoom/scaling rewrite.** Replaced the legacy `transform: scale()` + clamp-on-canvas combo with a single CSS variable, `--board-h`, that drives every dependent dimension (canvas size, HUD widths, gap). The canvas grows and shrinks in real CSS pixels, so the bitmap (`canvas.width × DPR`) is always in lockstep with `getBoundingClientRect()` — no smear trails on zoom-out, no empty space below the board on certain viewport heights, no aspect-ratio glitches.
+- **fitToScreen is now device-aware.** It computes the available height/width budget from the actual stage rect, accounting for mobile stacking and the virtual pad, then clamps the result to `[360px, 920px]`. Manual zoom (60–160%) is a multiplier on top of the fitted base, so "Fit" then "+"/"−" composes correctly.
+- **Viewport resilience.** Listens to `resize` and `orientationchange` so the board re-fits when the keyboard appears, an iOS browser bar collapses, or the user rotates the device.
+
+### Changed
+- Service worker cache bumped to `tetris-v1.2.6`.
+- README badge → 1.2.2.
+
 ## [1.2.1] — 2026-06-14
 
 ### Added

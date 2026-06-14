@@ -1,14 +1,29 @@
 /* tetris — game.css
  * Layout of HUDs, board, virtual pad and overlay. */
 
+/* Single source of truth for board size: --board-h (CSS pixels, no DPR/transform).
+ * Set by app.js fitToScreen() based on available viewport, then multiplied by the
+ * user's manual zoom (60–160%). All downstream sizes (canvas, HUDs, gap) derive
+ * from this so the layout cannot disagree with itself. */
 .game-wrap {
+  --board-h: 600px;
+  --board-w: calc(var(--board-h) / 2);
+  --hud-w: clamp(96px, calc(var(--board-h) * .22), 150px);
+  --gap: clamp(8px, calc(var(--board-h) * .03), 22px);
+
   display: grid;
-  grid-template-columns: minmax(110px, 140px) auto minmax(110px, 140px);
-  gap: 18px;
+  grid-template-columns: var(--hud-w) var(--board-w) var(--hud-w);
+  gap: var(--gap);
   align-items: stretch;
-  transform: scale(var(--zoom, 1));
-  transform-origin: top center;
-  transition: transform .25s ease;
+  /* No transform: scale() anywhere. Zoom is realized by changing --board-h
+   * directly, which makes the canvas's CSS size change — so getBoundingClientRect()
+   * and canvas.width agree, no aliasing, no smear, no empty space mismatch. */
+  transition: --board-h .2s ease;
+}
+@property --board-h {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 600px;
 }
 
 .hud { display: flex; flex-direction: column; gap: 14px; }
@@ -83,19 +98,13 @@ html[data-theme="color"] .hud-block { border-radius: 4px; box-shadow: inset 0 0 
  * Base 300x600. On taller windows we expand both dims while preserving the
  * 1:2 aspect ratio so the playfield naturally fills more vertical space
  * without ever clipping. clamp() picks the size based on viewport height. */
+/* Canvas derives directly from --board-h. No clamps, no dvh, no aspect-ratio
+ * override — width is exactly half the height, always. The DPR-aware resize()
+ * in renderer.js reads getBoundingClientRect() and matches the bitmap to it. */
 #game-canvas {
   display: block;
-  width: clamp(300px, 35dvh, 420px);
-  height: clamp(600px, 70dvh, 840px);
-  max-height: calc(100dvh - 200px);
-  aspect-ratio: 1 / 2;
-  /* image-rendering: auto on the main board so fractional downscale (when the
-   * --zoom transform shrinks the wrap) uses smooth bilinear filtering instead
-   * of nearest-neighbor. With `pixelated` at zoom-out, the high-DPR bitmap
-   * gets sampled into a much smaller display area and rows of cells aliased
-   * into visible horizontal stripes that looked like a smear trail.
-   * The per-theme `pixelated` override is preserved on Classic & Color which
-   * are 1:1 and benefit from sharp edges. */
+  width: var(--board-w);
+  height: var(--board-h);
   image-rendering: auto;
 }
 
@@ -182,19 +191,20 @@ body.vpad-on .vpad { display: grid; }
   .hud-block { flex: 1; min-width: 0; padding: 8px 10px; }
   .hud-block canvas { max-width: 80px; }
   .hud-keys { display: none; }
+  /* Mobile: stack HUDs above and below board; --board-h still drives canvas size,
+   * but width clamps so the board can't exceed the viewport. */
   #game-canvas {
-    width: min(80vw, 320px);
-    height: auto;
-    max-height: 60dvh;
+    width: min(var(--board-w), 80vw);
+    height: min(var(--board-h), 160vw);
   }
   .stage { gap: 8px; padding: 4px 10px 10px; }
   .overlay-card { padding: 18px 16px; width: min(220px, calc(100% - 24px)); gap: 12px; }
 }
 
-/* Short windows — keep board compact and shrink the overlay card a bit. */
+/* Short windows: shrink the overlay card a bit. Board sizing handled by
+ * fitToScreen() via --board-h. */
 @media (max-height: 720px) {
   .game-wrap { gap: 10px; }
-  #game-canvas { width: 300px; height: 600px; max-height: calc(100dvh - 180px); }
   .overlay-card { padding: 18px 18px 16px; gap: 10px; }
 }
 

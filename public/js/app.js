@@ -25,7 +25,7 @@ import { Scoreboard } from './scoreboard.js';
 // Bump this string on every release; it ends up inside every signed receipt
 // so users can prove which client version played the game. Pair it with the
 // version string in index.html for consistency.
-const CLIENT_VERSION = '1.2.1';
+const CLIENT_VERSION = '1.2.2';
 
 // Convenience: jQuery's $ but it's just querySelector.
 const $ = (q) => document.querySelector(q);
@@ -35,15 +35,65 @@ const $ = (q) => document.querySelector(q);
 // ---------------------------------------------------------------------------
 // Persisted preferences live in localStorage (via storage.js). They control:
 //   - <html data-theme=…> and <html data-mode=…> (CSS themes pick this up)
-//   - --zoom CSS variable on #game-wrap (zoom in/out)
+// SIZING MODEL (post-v1.2.1 rewrite)
+// ---------------------------------
+// One source of truth: --board-h on .game-wrap, in CSS pixels.
+// Everything else — canvas, HUD widths, gap — is derived in game.css.
+//
+//   actual_board_h = fittedBaseHeight * zoomMultiplier
+//
+// where:
+//   fittedBaseHeight = computed by computeFittedHeight() based on the
+//     available stage area (stage rect minus padding, accounting for the
+//     virtual pad if visible). Clamped to a sane min/max.
+//   zoomMultiplier   = settings.zoom / 100, range 0.6–1.6.
+//
+// Because the canvas is sized in real CSS pixels (no transform: scale), the
+// renderer's bitmap (set by resize() = CSS width × DPR) is always coherent
+// with getBoundingClientRect() — no smear trails, no empty-space mismatch.
+const BOARD_ASPECT = 2;          // height / width
+const BOARD_MIN_H = 360;          // never go below this even on tiny screens
+const BOARD_MAX_H = 920;          // never balloon past this on huge monitors
+
+function computeFittedHeight() {
+  const stage = document.querySelector('.stage');
+  const rect = stage.getBoundingClientRect();
+  // Reserve room for HUD blocks above/below the board on mobile (~140px),
+  // or the side HUDs on desktop (no vertical cost). On mobile the layout
+  // stacks, so vertical budget is reduced.
+  const isMobile = matchMedia('(max-width: 760px)').matches;
+  const vpadOn = document.body.classList.contains('vpad-on');
+  const reservedY = (isMobile ? 220 : 24) + (vpadOn && isMobile ? 140 : 0);
+  const availH = Math.max(BOARD_MIN_H, rect.height - reservedY);
+
+  // Horizontal budget: on desktop the board competes with two HUDs (≈330px)
+  // and gaps. The widest the board can be is (available width − sidecar room)
+  // — then height = width × 2.
+  const sidecarsAndGaps = isMobile ? 24 : 340;
+  const availW = Math.max(BOARD_MIN_H / BOARD_ASPECT, rect.width - sidecarsAndGaps);
+  const availHFromW = availW * BOARD_ASPECT;
+
+  return Math.max(BOARD_MIN_H, Math.min(BOARD_MAX_H, availH, availHFromW));
+}
+
+function applyBoardSize() {
+  const wrap = document.getElementById('game-wrap');
+  const s = settings.state;
+  const base = computeFittedHeight();
+  const z = (s.zoom || 100) / 100;
+  const boardH = Math.round(base * z);
+  wrap.style.setProperty('--board-h', boardH + 'px');
+  // Tell the renderer to re-sync its bitmap on the next frame (after layout).
+  requestAnimationFrame(() => { if (typeof renderer !== 'undefined') renderer.resize(); });
+}
+
+//   - --zoom CSS variable on #game-wrap (zoom in/out, multiplier)
+//   - --board-h CSS variable on #game-wrap (fitted base height in px)
 //   - body.vpad-on class (show on-screen D-pad)
-//   - "fit to screen" auto-zoom on small viewports
 function applySettings() {
   const s = settings.state;
   document.documentElement.dataset.theme = s.theme;
   document.documentElement.dataset.mode = s.mode;
-  const zoom = (s.zoom || 100) / 100;
-  document.getElementById('game-wrap').style.setProperty('--zoom', zoom);
 
   // Virtual pad visibility: 'always', 'never', or 'auto' = show on coarse pointer
   // (i.e., touch devices). matchMedia('(pointer: coarse)') is the canonical check.
@@ -51,24 +101,20 @@ function applySettings() {
     || (s.vpadMode === 'auto' && matchMedia('(pointer: coarse)').matches);
   document.body.classList.toggle('vpad-on', wantsVPad);
 
-  if (s.fit) fitToScreen();
+  applyBoardSize();
 }
 
-// Measure the game wrapper against its parent and pick a uniform scale that
-// makes it fit. We have to do the measurement on the next frame because
-// changing --zoom and reading dimensions in the same frame returns stale values.
+// "Fit to screen" simply resets the manual zoom to 100% and re-applies; the
+// base size (computeFittedHeight) already adapts to the viewport.
 function fitToScreen() {
-  const wrap = document.getElementById('game-wrap');
-  wrap.style.setProperty('--zoom', 1);
-  requestAnimationFrame(() => {
-    const wrapRect = wrap.getBoundingClientRect();
-    const stage = wrap.parentElement.getBoundingClientRect();
-    const padded = stage.height - 40;                         // 40 px headroom
-    const scale = Math.min(1.6, Math.max(0.5, padded / wrapRect.height));
-    wrap.style.setProperty('--zoom', scale);
-    settings.set('zoom', Math.round(scale * 100));
-  });
+  settings.patch({ fit: true, zoom: 100 });
+  applyBoardSize();
 }
+
+// Keep the board in sync when the viewport changes (resize, orientation flip,
+// browser UI bars showing/hiding, keyboard appearing).
+window.addEventListener('resize', () => applyBoardSize());
+window.addEventListener('orientationchange', () => applyBoardSize());
 
 // ---------------------------------------------------------------------------
 // Boot
@@ -260,25 +306,18 @@ $('#btn-mode').addEventListener('click', () => {
   settings.set('mode', settings.get('mode') === 'dark' ? 'light' : 'dark');
   applySettings();
 });
-// Manual zoom buttons disable the auto-fit flag so the user's choice sticks.
-// Otherwise applySettings() would immediately overwrite the zoom via fitToScreen().
-// We also re-resize the renderer's canvas bitmaps on the next frame so they match
-// the new CSS-scaled dimensions (sharper output, no stale-bitmap trails).
-function refreshRendererSize() { requestAnimationFrame(() => renderer.resize()); }
+// Manual zoom buttons: adjust the multiplier on top of the fitted base.
+// fit=false so subsequent applySettings calls don't snap back to 100%.
 $('#btn-zoom-in').addEventListener('click', () => {
   settings.patch({ fit: false, zoom: Math.min(160, settings.get('zoom') + 10) });
-  applySettings();
-  refreshRendererSize();
+  applyBoardSize();
 });
 $('#btn-zoom-out').addEventListener('click', () => {
   settings.patch({ fit: false, zoom: Math.max(60, settings.get('zoom') - 10) });
-  applySettings();
-  refreshRendererSize();
+  applyBoardSize();
 });
 $('#btn-zoom-reset').addEventListener('click', () => {
-  settings.set('fit', true);
   fitToScreen();
-  refreshRendererSize();
 });
 
 // Sync sound + scoreboard with persisted settings at boot. Music is wired
