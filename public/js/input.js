@@ -167,6 +167,9 @@ export class Input {
       let holdTimer, repeatTimer;
       const press = (ev) => {
         ev.preventDefault();
+        // Pressing a vpad button keeps the floating pad alive on mobile —
+        // reset the auto-hide timer so the player can keep using it.
+        if (this.revealVPad) this.revealVPad();
         this.emit(action);
         if (action === 'left' || action === 'right') {
           // Slightly longer charge (180 ms) and same 50 ms repeat — thumb-friendly.
@@ -189,20 +192,20 @@ export class Input {
   }
 
   // -------------------------------------------------------------------------
-  // Touch directly on the board
+  // Touch directly on the board (v1.5.0 — classic mobile Tetris gestures)
   // -------------------------------------------------------------------------
-  // We support three gestures, decided at touchend:
+  // The mobile board fills the entire viewport, so every touch lands here.
+  // FIVE gestures, decided either DURING the touch (drag) or AT touchend:
   //
-  //   TAP    — touchstart/touchend with <12 px movement and <250 ms duration
-  //            → rotate (CW)
-  //   DRAG   — finger moves >22 px on x or y axis
-  //            → for each 22 px traveled, emit step move ('left'/'right'/'soft')
-  //   SWIPE  — long vertical move (>90 px) done quickly (<400 ms) at touchend
-  //            → 'drop' (hard drop)
+  //   TAP        — <12 px movement and <250 ms duration            → rotate (CW)
+  //   DRAG L/R   — finger moves >22 px on the X axis                → step move
+  //   DRAG DOWN  — finger moves >22 px downward                     → step soft
+  //   SWIPE UP   — fast upward swipe, dy < -90 px in <400 ms         → hard drop
+  //   LONG-PRESS — still finger held ≥500 ms                         → hold
   //
-  // The 22 px per-cell threshold is eyeballed; it's roughly one Tetris cell on
-  // a typical phone screen, which makes the drag feel like "moving the piece
-  // with my finger" rather than scrubbing through abstract gestures.
+  // AMBIGUOUS-TOUCH → VPAD REVEAL. A touch that matched no gesture reveals
+  // the floating virtual pad for ~3 s by toggling body.vpad-reveal. This is
+  // the discovery hint for new players who didn't read the keys list.
   bindTouch() {
     if (!this.boardEl) return;
     let sx = 0, sy = 0;          // touch START position
@@ -211,6 +214,32 @@ export class Input {
     let moved = false;           // any drag detected during this touch?
     const THRESH = 22;           // px per "cell step" of horizontal/vertical drag
 
+    let longPressTimer = null;   // 500 ms hold trigger
+    let consumed = false;        // if long-press fired, swallow touchend
+    let vpadHideTimer = null;    // auto-hide the revealed vpad
+    const LONG_PRESS_MS = 500;
+    const VPAD_REVEAL_MS = 3000;
+    const TAP_MAX = 12;
+
+    // Reveal/dismiss the floating vpad. Idempotent — calling reveal twice
+    // resets the auto-hide timer (so using the pad keeps it visible).
+    const revealVPad = () => {
+      document.body.classList.add('vpad-reveal');
+      clearTimeout(vpadHideTimer);
+      vpadHideTimer = setTimeout(() => {
+        document.body.classList.remove('vpad-reveal');
+        vpadHideTimer = null;
+      }, VPAD_REVEAL_MS);
+    };
+    const dismissVPad = () => {
+      clearTimeout(vpadHideTimer);
+      vpadHideTimer = null;
+      document.body.classList.remove('vpad-reveal');
+    };
+    // Exposed so bindVPad's button press can keep the pad alive while in use.
+    this.revealVPad = revealVPad;
+    this.dismissVPad = dismissVPad;
+
     this.boardEl.addEventListener('touchstart', (e) => {
       if (e.touches.length !== 1) return;             // ignore multi-finger
       const t = e.touches[0];
@@ -218,6 +247,16 @@ export class Input {
       sy = lastY = t.clientY;
       st = performance.now();
       moved = false;
+      consumed = false;
+      // Arm long-press — fires HOLD if finger still down + still after 500 ms.
+      clearTimeout(longPressTimer);
+      longPressTimer = setTimeout(() => {
+        if (!moved) {
+          this.emit('hold');
+          consumed = true;       // touchend won't also fire 'rotate'
+        }
+        longPressTimer = null;
+      }, LONG_PRESS_MS);
     }, { passive: true });
 
     // During the drag, emit one step per `THRESH` pixels of movement on each
@@ -226,6 +265,13 @@ export class Input {
     this.boardEl.addEventListener('touchmove', (e) => {
       if (e.touches.length !== 1) return;
       const t = e.touches[0];
+      // Cancel pending long-press as soon as the finger drifts past TAP_MAX.
+      if (longPressTimer) {
+        if (Math.abs(t.clientX - sx) > TAP_MAX || Math.abs(t.clientY - sy) > TAP_MAX) {
+          clearTimeout(longPressTimer);
+          longPressTimer = null;
+        }
+      }
       const dx = t.clientX - lastX;
       const dy = t.clientY - lastY;
       if (Math.abs(dx) > THRESH) {
@@ -245,6 +291,12 @@ export class Input {
     }, { passive: true });
 
     this.boardEl.addEventListener('touchend', (e) => {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+
+      // Long-press already fired hold — swallow this touchend entirely.
+      if (consumed) { consumed = false; return; }
+
       const dt = performance.now() - st;
       const t = e.changedTouches[0];
       const dx = t.clientX - sx;
@@ -252,16 +304,33 @@ export class Input {
       const adx = Math.abs(dx), ady = Math.abs(dy);
 
       // TAP — barely moved, brief duration → rotate.
-      if (!moved && dt < 250 && adx < 12 && ady < 12) {
+      if (!moved && dt < 250 && adx < TAP_MAX && ady < TAP_MAX) {
         this.emit('rotate');
+        // Tap on the board also dismisses a revealed vpad (tap-outside).
+        if (document.body.classList.contains('vpad-reveal')) dismissVPad();
         return;
       }
-      // SWIPE — long fast downward gesture → hard drop.
-      // The `ady > adx` check ensures we don't fire on diagonal swipes that
-      // are more horizontal than vertical.
-      if (ady > 90 && dy > 0 && ady > adx && dt < 400) {
+      // SWIPE UP — fast upward gesture, vertical-dominant → hard drop.
+      // dy is NEGATIVE for an up-swipe (touch ended above start). v1.5.0
+      // flipped the v1.4.x "swipe DOWN = hard drop" mapping to match the
+      // classic mobile Tetris convention: drag down = soft, swipe up = hard.
+      if (ady > 90 && dy < 0 && ady > adx && dt < 400) {
         this.emit('drop');
+        return;
       }
+
+      // AMBIGUOUS — no gesture matched. New-player discovery hint: reveal
+      // the floating vpad for ~3 s so the buttons become visible. We only
+      // reveal when the user clearly didn't already drag, tap, or swipe.
+      if (!moved) revealVPad();
+    }, { passive: true });
+
+    // Touch interrupted by OS (incoming call, notification, system gesture).
+    this.boardEl.addEventListener('touchcancel', () => {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+      consumed = false;
+      moved = false;
     }, { passive: true });
   }
 }

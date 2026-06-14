@@ -31,7 +31,7 @@
         </svg>
         <span>tetris</span>
       </a>
-      <a class="brand-version" href="https://github.com/paulfxyz/tetris/releases/tag/v1.4.3" target="_blank" rel="noopener" title="View this release on GitHub">v1.4.3</a>
+      <a class="brand-version" href="https://github.com/paulfxyz/tetris/releases/tag/v1.5.0" target="_blank" rel="noopener" title="View this release on GitHub">v1.5.0</a>
     </div>
     <nav class="topbar-actions">
       <button class="iconbtn" id="btn-zoom-out" title="Zoom out" aria-label="Zoom out">−</button>
@@ -42,6 +42,28 @@
       <button class="iconbtn" id="btn-settings" title="Settings" aria-label="Settings">⚙</button>
     </nav>
   </header>
+
+  <!-- Mobile floating bar (HOLD · stats · NEXT · actions). Hidden on desktop via CSS. -->
+  <div class="mobile-bar" id="mobile-bar" aria-label="game stats">
+    <div class="mb-mini">
+      <span class="mb-mini-label">hold</span>
+      <canvas id="hold-canvas-mobile" width="96" height="96" aria-label="held piece"></canvas>
+    </div>
+    <dl class="mb-stats">
+      <dt class="mb-stat-l">score</dt><dd class="mb-stat-v" id="mb-score">0</dd>
+      <dt class="mb-stat-l">lvl</dt><dd class="mb-stat-v" id="mb-level">1</dd>
+      <dt class="mb-stat-l">lines</dt><dd class="mb-stat-v" id="mb-lines">0</dd>
+      <dt class="mb-stat-l">time</dt><dd class="mb-stat-v" id="mb-time">0:00</dd>
+    </dl>
+    <div class="mb-mini">
+      <span class="mb-mini-label">next</span>
+      <canvas id="next-canvas-mobile" width="96" height="120" aria-label="next pieces"></canvas>
+    </div>
+    <div class="mb-actions">
+      <button class="iconbtn" id="btn-mode-mobile" title="Light / dark" aria-label="Toggle light / dark">☼</button>
+      <button class="iconbtn" id="btn-settings-mobile" title="Settings" aria-label="Settings">⚙</button>
+    </div>
+  </div>
 
   <!-- Main game stage -->
   <main class="stage">
@@ -195,7 +217,7 @@
 
   <!-- Footer -->
   <footer class="footer">
-    <span>tetris · v1.4.3 — drop, line, repeat.</span>
+    <span>tetris · v1.5.0 — drop, line, repeat.</span>
     <br />
     <a href="https://github.com/paulfxyz/tetris" target="_blank" rel="noopener">source on github</a>
     <span class="sep">/</span>

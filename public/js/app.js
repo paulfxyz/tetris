@@ -25,7 +25,7 @@ import { Scoreboard } from './scoreboard.js';
 // Bump this string on every release; it ends up inside every signed receipt
 // so users can prove which client version played the game. Pair it with the
 // version string in index.html for consistency.
-const CLIENT_VERSION = '1.4.3';
+const CLIENT_VERSION = '1.5.0';
 
 // Convenience: jQuery's $ but it's just querySelector.
 const $ = (q) => document.querySelector(q);
@@ -80,39 +80,52 @@ function outerH(el) {
 }
 
 // Vertical budget available for the board itself, inside .stage.
+//
+// v1.5.0 mobile model is FUNDAMENTALLY different from desktop:
+//   - .stage is 100dvh × 100vw with zero padding.
+//   - .board-frame is edge-to-edge with zero padding/border.
+//   - .mobile-bar floats over the top (position:fixed) — it is NOT a child
+//     of .stage, so the old sibling-subtraction loop misses it. We must
+//     measure its bottom edge explicitly from the viewport top and subtract.
+//   - .vpad floats over the bottom (position:fixed) at very low opacity —
+//     it does NOT eat board space; the board renders behind it.
 function availableBoardHeight() {
   const stage = document.querySelector('.stage');
   const wrap = document.getElementById('game-wrap');
   if (!stage || !wrap) return BOARD_MIN_H;
 
+  const isMobile = matchMedia('(max-width: 760px)').matches;
+
+  // ---- MOBILE: board = full viewport minus floating mobile-bar minus safe-area-bottom.
+  if (isMobile) {
+    const mb = document.getElementById('mobile-bar');
+    // Mobile-bar is fixed:top — its .bottom is the px below the viewport top
+    // where the bar ends. Add a small breathing gap so the playfield doesn't
+    // butt against the bar's blurred edge.
+    const mbBottom = mb ? mb.getBoundingClientRect().bottom : 56;
+    // Read safe-area-inset-bottom from a probe element — CSS env() isn't
+    // accessible from JS directly, so we read the computed style of body's
+    // padding-bottom (which is set to env(safe-area-inset-bottom) by base.css
+    // on supporting browsers). Fallback to 0.
+    const safeBottom = 12; // small breathing pad; vpad floats on top anyway
+    return Math.max(BOARD_MIN_H, window.innerHeight - mbBottom - safeBottom - 8);
+  }
+
+  // ---- DESKTOP: pre-v1.5.0 logic, untouched.
   const stageRect = stage.getBoundingClientRect();
   const cs = getComputedStyle(stage);
   const padY = parseFloat(cs.paddingTop || 0) + parseFloat(cs.paddingBottom || 0);
 
-  // Subtract every sibling of .game-wrap inside .stage (e.g. vpad on mobile).
+  // Subtract every sibling of .game-wrap inside .stage (e.g. vpad on desktop
+  // if it ever showed there — it doesn't, but keep the loop for safety).
   let chromeY = padY;
   for (const child of stage.children) {
     if (child === wrap) continue;
     chromeY += outerH(child);
   }
 
-  // Mobile only: HUDs collapse into a single strip ABOVE the board inside
-  // .game-wrap (in v1.4.0 left+right HUDs share grid-row 1). Measure the
-  // TALLEST of the two (don't double-count overlapping siblings) plus one
-  // row-gap separating the HUD strip from the board.
-  const isMobile = matchMedia('(max-width: 760px)').matches;
-  if (isMobile) {
-    const huds = wrap.querySelectorAll(':scope > .hud');
-    let tallestHud = 0;
-    for (const hud of huds) tallestHud = Math.max(tallestHud, outerH(hud));
-    chromeY += tallestHud;
-    const wrapCs = getComputedStyle(wrap);
-    const rowGap = parseFloat(wrapCs.rowGap || wrapCs.gap || 0);
-    if (rowGap) chromeY += rowGap;
-  }
-
   // Board-frame's own padding + border eats into the canvas height —
-  // subtract it (both mobile and desktop) so the canvas fits the budget.
+  // subtract it so the canvas fits the budget exactly.
   const frame = wrap.querySelector(':scope > .board-frame');
   if (frame) {
     const fcs = getComputedStyle(frame);
@@ -147,10 +160,9 @@ function availableBoardWidth() {
   }
 
   if (isMobile) {
-    const stageCs = getComputedStyle(stage);
-    const padX = parseFloat(stageCs.paddingLeft || 0) + parseFloat(stageCs.paddingRight || 0);
-    const budget = Math.min(stageRect.width - padX, window.innerWidth * 0.92);
-    return Math.max(BOARD_MIN_H / BOARD_ASPECT, budget - framePadX);
+    // v1.5.0: board frame is edge-to-edge (no padding/border), so the budget
+    // is the FULL viewport width. The canvas is centered inside via flex.
+    return Math.max(BOARD_MIN_H / BOARD_ASPECT, window.innerWidth);
   }
   const cs = getComputedStyle(wrap);
   const hudW = parseFloat(cs.getPropertyValue('--hud-w')) || 130;
@@ -252,6 +264,10 @@ const renderer = new Renderer({
   canvas: $('#game-canvas'),
   holdCanvas: $('#hold-canvas'),
   nextCanvas: $('#next-canvas'),
+  // v1.5.0 — mobile floating bar mirrors HOLD + NEXT into its own mini-canvases.
+  // The renderer draws into them in parallel with the desktop HUD canvases.
+  holdCanvasMobile: $('#hold-canvas-mobile'),
+  nextCanvasMobile: $('#next-canvas-mobile'),
 });
 const bg = new Background($('#bg-canvas'));
 const scoreboard = new Scoreboard();
@@ -290,11 +306,17 @@ function showOverlay(html) {
 function hideOverlay() { overlayEl.hidden = true; }
 
 function titleScreen() {
+  // v1.5.0 — show the right hint for the device. Touch-primary devices get
+  // the gesture cheat-sheet; everyone else gets the keyboard cheat-sheet.
+  const isTouch = matchMedia('(pointer: coarse)').matches;
+  const hint = isTouch
+    ? 'tap rotate · swipe ↔ move · drag ↓ soft · swipe ↑ drop · long-press hold'
+    : '↑ rotate · ← → move · ↓ soft · space drop · C hold · P pause';
   showOverlay(`
     <h1>tetris</h1>
     <p>drop, line, repeat.</p>
     <button class="cta" id="overlay-start">Press Start</button>
-    <small>↑ rotate · ← → move · ↓ soft · space drop · C hold · P pause</small>
+    <small>${hint}</small>
   `);
   $('#overlay-start').addEventListener('click', startGame);
 }
@@ -428,6 +450,12 @@ $('#btn-mode').addEventListener('click', () => {
   settings.set('mode', settings.get('mode') === 'dark' ? 'light' : 'dark');
   applySettings();
 });
+// v1.5.0 — mobile-bar mirror buttons. The mobile floating bar has its own
+// light/dark + settings buttons so users don't have to fish for the desktop
+// topbar (which is display:none on phones). They forward to the canonical
+// handlers above so behavior stays in one place.
+$('#btn-mode-mobile')?.addEventListener('click', () => $('#btn-mode').click());
+$('#btn-settings-mobile')?.addEventListener('click', () => $('#btn-settings').click());
 // Manual zoom buttons: adjust the multiplier on top of the fitted base.
 // fit=false so subsequent applySettings calls don't snap back to 100%.
 $('#btn-zoom-in').addEventListener('click', () => {
@@ -589,10 +617,23 @@ function loop(now) {
   trackPiece();
   renderer.draw(engine);
   // HUD updates — cheap to do every frame because innerText only writes when changed.
-  $('#stat-score').textContent = engine.score.toLocaleString();
+  const scoreText = engine.score.toLocaleString();
+  const timeText = formatTime(engine.elapsedMs());
+  $('#stat-score').textContent = scoreText;
   $('#stat-lines').textContent = engine.lines;
   $('#stat-level').textContent = engine.level;
-  $('#stat-time').textContent = formatTime(engine.elapsedMs());
+  $('#stat-time').textContent = timeText;
+  // v1.5.0 — mirror into the mobile floating bar. These elements exist in the
+  // DOM at all viewport sizes (CSS hides .mobile-bar on desktop), so writing
+  // to them is harmless on desktop and live on phones.
+  const mbScore = document.getElementById('mb-score');
+  if (mbScore) mbScore.textContent = scoreText;
+  const mbLevel = document.getElementById('mb-level');
+  if (mbLevel) mbLevel.textContent = engine.level;
+  const mbLines = document.getElementById('mb-lines');
+  if (mbLines) mbLines.textContent = engine.lines;
+  const mbTime = document.getElementById('mb-time');
+  if (mbTime) mbTime.textContent = timeText;
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);

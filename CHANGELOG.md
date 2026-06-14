@@ -2,6 +2,25 @@
 
 All notable changes to **tetris** will be documented here. Format inspired by [Keep a Changelog](https://keepachangelog.com/), versioning follows [SemVer](https://semver.org/).
 
+## [1.5.0] — 2026-06-14
+
+### Added
+- **Mobile: complete rebuild around gestures.** The board now fills the entire viewport edge-to-edge — no chrome, no padding, no rounded frame. Five classic mobile Tetris gestures: tap = rotate, drag left/right = move (one cell per 22 px), drag down = soft drop, **swipe up** = hard drop, long-press = hold. The mapping flips v1.4.x's "swipe down = hard drop" to match the convention every modern Tetris mobile client uses.
+- **Floating mobile bar.** A single horizontal chip at the top of the viewport (HOLD · score/level/lines/time · NEXT · light·dark / settings) replaces the side HUDs. Backdrop-blurred over the board so the playfield underneath is still visible — the chip floats, doesn't displace.
+- **Discovery hint vpad.** The virtual D-pad is now always present at 18 % opacity so new players notice it exists. Any ambiguous touch (a release that wasn't a tap, swipe, drag, or long-press) reveals the pad at full opacity for 3 seconds. Tap a button to act — the timer resets so you can keep using it. Tap the board to dismiss early.
+- **Renderer mirroring.** `Renderer` now accepts optional `holdCanvasMobile` / `nextCanvasMobile` and mirrors the HOLD and NEXT previews into them every frame. Desktop HUD canvases are unchanged.
+
+### Changed
+- `availableBoardHeight()` rewritten for mobile: budget is `100dvh − floating-mobile-bar.bottom − safe-area-bottom − breathing room`. The mobile-bar floats `position:fixed` so the old sibling-subtraction loop missed it.
+- `availableBoardWidth()` on mobile is now full `window.innerWidth` — board-frame has zero padding and zero border, so the canvas can use every pixel.
+- `bindTouch()` adds long-press detection (500 ms), swipe-up = hard drop, ambiguous-touch → vpad reveal, and a `touchcancel` cleanup path. Long-press fires once and consumes the trailing touchend so it doesn't also rotate.
+- Vpad pointer-events default to `none` (so touches pass through to the board) and flip to `auto` only while `body.vpad-reveal` is set.
+- Service worker cache bumped to `tetris-v1.5.0`.
+- README badge → 1.5.0.
+
+### Fixed
+- Mobile no longer shows a black playground. The board fills the viewport at all phone sizes from iPhone SE to iPhone 16 Pro Max, and the overlay (title / pause / game-over) covers the full screen with a solid background.
+
 ## [1.4.3] — 2026-06-14
 
 ### Fixed

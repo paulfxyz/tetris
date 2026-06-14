@@ -153,13 +153,22 @@ function hexToRgb(c) {
 // Renderer
 // ===========================================================================
 export class Renderer {
-  constructor({ canvas, holdCanvas, nextCanvas }) {
+  constructor({ canvas, holdCanvas, nextCanvas, holdCanvasMobile, nextCanvasMobile }) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.holdCanvas = holdCanvas;
     this.holdCtx = holdCanvas.getContext('2d');
     this.nextCanvas = nextCanvas;
     this.nextCtx = nextCanvas.getContext('2d');
+    // v1.5.0: optional mobile-bar mirror canvases for HOLD and NEXT. Drawn
+    // in parallel with the desktop HUD canvases so phones see live previews
+    // in the floating top bar (the desktop hud-left/right are display:none
+    // on mobile, but their canvases would still be drawn into — we just
+    // also draw into these mobile-only canvases so the visible HUD updates).
+    this.holdCanvasMobile = holdCanvasMobile || null;
+    this.holdCtxMobile = holdCanvasMobile ? holdCanvasMobile.getContext('2d') : null;
+    this.nextCanvasMobile = nextCanvasMobile || null;
+    this.nextCtxMobile = nextCanvasMobile ? nextCanvasMobile.getContext('2d') : null;
     this.resize();
     // Re-resize whenever the viewport changes (also catches orientation flip,
     // browser UI bars hiding, devtools opening).
@@ -174,7 +183,10 @@ export class Renderer {
   // we re-apply setTransform here on every resize.
   resize() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    for (const cv of [this.canvas, this.holdCanvas, this.nextCanvas]) {
+    const canvases = [this.canvas, this.holdCanvas, this.nextCanvas];
+    if (this.holdCanvasMobile) canvases.push(this.holdCanvasMobile);
+    if (this.nextCanvasMobile) canvases.push(this.nextCanvasMobile);
+    for (const cv of canvases) {
       const rect = cv.getBoundingClientRect();
       cv.width = Math.max(1, Math.round(rect.width * dpr));
       cv.height = Math.max(1, Math.round(rect.height * dpr));
@@ -322,18 +334,24 @@ export class Renderer {
     // array, so wrap into an array if held, or pass empty array if not.
     // When the slot is empty, show a low-opacity ghost of the CURRENT piece
     // so the panel never looks empty — it hints at what hitting C will store.
-    if (engine.hold) {
-      this.drawMini(this.holdCtx, this.holdCanvas, [engine.hold]);
-    } else if (engine.current?.type) {
-      this.drawMini(this.holdCtx, this.holdCanvas, [engine.current.type], { ghost: true });
-    } else {
-      this.drawMini(this.holdCtx, this.holdCanvas, []);
-    }
+    const drawInto = (ctx, canvas) => {
+      if (!ctx || !canvas) return;
+      if (engine.hold) this.drawMini(ctx, canvas, [engine.hold]);
+      else if (engine.current?.type) this.drawMini(ctx, canvas, [engine.current.type], { ghost: true });
+      else this.drawMini(ctx, canvas, []);
+    };
+    drawInto(this.holdCtx, this.holdCanvas);
+    drawInto(this.holdCtxMobile, this.holdCanvasMobile);
   }
 
   drawNext(engine) {
-    // Show the next 4 upcoming pieces from the queue.
-    this.drawMini(this.nextCtx, this.nextCanvas, (engine.queue || []).slice(0, 4));
+    // Show the next 4 upcoming pieces from the queue. Mobile bar shows just
+    // the next 2 to keep the chip compact.
+    const queue = engine.queue || [];
+    this.drawMini(this.nextCtx, this.nextCanvas, queue.slice(0, 4));
+    if (this.nextCtxMobile && this.nextCanvasMobile) {
+      this.drawMini(this.nextCtxMobile, this.nextCanvasMobile, queue.slice(0, 2));
+    }
   }
 
   // Single per-frame entry point. Call this from your animation loop.
