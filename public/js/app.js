@@ -81,7 +81,12 @@ function applyBoardSize() {
   const s = settings.state;
   const base = computeFittedHeight();
   const z = (s.zoom || 100) / 100;
-  const boardH = Math.round(base * z);
+  // Hard cap: even if the user zoomed in past what fits, never let the board
+  // exceed the viewport — otherwise the bottom rows of the play grid clip out
+  // of the board frame. Cap at 95% of stage height as a safety margin.
+  const stage = document.querySelector('.stage').getBoundingClientRect();
+  const ceiling = Math.max(BOARD_MIN_H, stage.height * 0.95);
+  const boardH = Math.round(Math.min(base * z, ceiling, BOARD_MAX_H));
   wrap.style.setProperty('--board-h', boardH + 'px');
   // Tell the renderer to re-sync its bitmap on the next frame (after layout).
   requestAnimationFrame(() => { if (typeof renderer !== 'undefined') renderer.resize(); });

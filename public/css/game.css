@@ -14,12 +14,22 @@
   display: grid;
   grid-template-columns: var(--hud-w) var(--board-w) var(--hud-w);
   gap: var(--gap);
-  align-items: stretch;
+  /* align-items: start makes HUD columns match the board's intrinsic height
+   * instead of stretching to the tallest sibling. Combined with the board
+   * canvas being height: var(--board-h), this guarantees the row's effective
+   * height = the board's height — no empty space below the board on zoom-out. */
+  align-items: start;
   /* No transform: scale() anywhere. Zoom is realized by changing --board-h
    * directly, which makes the canvas's CSS size change — so getBoundingClientRect()
    * and canvas.width agree, no aliasing, no smear, no empty space mismatch. */
   transition: --board-h .2s ease;
 }
+
+/* HUDs flex to fill the board's height: HOLD (or NEXT) sits flush at the top,
+ * the remaining HUD block (STATS / KEYS) anchored at the bottom. This keeps
+ * both side rails visually aligned with the top and bottom of the board
+ * regardless of how tall the board ends up. */
+.hud { height: var(--board-h); justify-content: space-between; }
 @property --board-h {
   syntax: '<length>';
   inherits: true;
