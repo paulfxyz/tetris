@@ -109,7 +109,16 @@ function drawCell(ctx, x, y, size, color, style, opts = {}) {
 // Canvas2D has no native rounded-rect (well, it does now with roundRect(), but
 // older mobile browsers don't ship it). This polyfill traces four arc corners.
 function roundRect(ctx, x, y, w, h, r) {
-  r = Math.min(r, w / 2, h / 2);
+  // Guard against degenerate sizes. When the caller computes an inset that
+  // ends up zero or negative (which happens in tight mobile NEXT/HOLD chips
+  // where the available cell can shrink under ~5 CSS px), arcTo throws on a
+  // negative radius and the whole frame fails to paint — leading to a black
+  // board. Bail out cleanly instead.
+  if (!(w > 0) || !(h > 0)) {
+    ctx.beginPath();
+    return;
+  }
+  r = Math.max(0, Math.min(r, w / 2, h / 2));
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.arcTo(x + w, y, x + w, y + h, r);
@@ -312,10 +321,13 @@ export class Renderer {
       const trimmed = trim(m);                  // shrink to tight bounding box
       // Pick a cell size that fits both width and height of the slot,
       // minus a small inset margin (~10 px) so blocks don't touch the panel edges.
-      const cell = Math.min(
+      // Clamp cell to a sensible minimum so tiny mobile chips don't pass
+      // negative widths into drawCell. Below ~4 CSS px the block becomes
+      // visually indistinguishable from a flat fill anyway.
+      const cell = Math.max(2, Math.min(
         (W - 10) / trimmed[0].length,
         (slotH - 10) / trimmed.length
-      );
+      ));
       const w = cell * trimmed[0].length;
       const h = cell * trimmed.length;
       const ox = (W - w) / 2;                    // center horizontally

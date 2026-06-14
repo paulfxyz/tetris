@@ -2,6 +2,12 @@
 
 All notable changes to **tetris** will be documented here. Format inspired by [Keep a Changelog](https://keepachangelog.com/), versioning follows [SemVer](https://semver.org/).
 
+## [1.5.1] — 2026-06-14
+
+### Fixed
+- **Mobile black-screen regression (critical).** v1.5.0 added mirrored HOLD/NEXT mini-canvases to the floating mobile bar (36 × 36 CSS px). At those tiny sizes the renderer's inset math for the glass "sheen" highlight produced a negative width, which made `roundRect()`'s polyfill call `arcTo()` with a negative radius. Every Tetris frame then threw `Failed to execute 'arcTo' on 'CanvasRenderingContext2D': The radius provided (-2.66667) is negative` — the main board never painted, leaving a fully black playfield on every iPhone. Two defenses: `roundRect()` now short-circuits when width or height is non-positive and clamps the radius to `>= 0`; `drawMini()` clamps the per-cell size to a `>= 2 px` floor so the mobile chips degrade to flat tiles instead of crashing the frame.
+- **Desktop regression.** v1.5.0's `.mobile-bar` HTML element fell back to its default block layout on desktop because every styling rule lived inside the `@media (max-width: 760px)` query — so HOLD/score/lvl/lines/time/NEXT and the two mini-canvases leaked into the top-left of the desktop layout. Added a default `.mobile-bar { display: none }` rule outside the media query; the mobile query re-enables it with `display: flex`. Desktop is back to its pre-v1.5.0 chrome.
+
 ## [1.5.0] — 2026-06-14
 
 ### Added

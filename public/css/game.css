@@ -215,6 +215,13 @@ body.vpad-on .vpad { display: grid; }
 .vbtn-drop { background: color-mix(in srgb, var(--color-accent) 18%, var(--color-surface)); }
 
 /* =====================================================================
+ * MOBILE-ONLY HUD HIDDEN ON DESKTOP
+ * The .mobile-bar element exists in the DOM for all viewports but must
+ * NEVER show on desktop. The mobile media query below re-enables it.
+ * ===================================================================== */
+.mobile-bar { display: none; }
+
+/* =====================================================================
  * MOBILE (v1.5.0 redesign) — fullscreen board + gesture-first
  * =====================================================================
  * Goals:
