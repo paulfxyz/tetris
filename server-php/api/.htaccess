@@ -1,0 +1,15 @@
+# tetris — /api/.htaccess
+# Route every /api/<anything> request to index.php and let it parse.
+
+RewriteEngine On
+RewriteBase /api/
+RewriteRule ^index\.php$ - [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . index.php [L]
+
+# Reasonable defaults
+<IfModule mod_headers.c>
+  Header set Referrer-Policy "no-referrer"
+  Header set X-Content-Type-Options "nosniff"
+</IfModule>

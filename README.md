@@ -1,6 +1,8 @@
-# 🟦 tetris (1.0.0)
+# 🟦 tetris (1.1.0)
 
 > Drop, line, repeat. A modern, offline-capable Tetris in pure HTML/JS — keyboard, touch & virtual pad, three themes (Classic B&W, Color, Modern Glass), and a **PGP-signed** scoreboard.
+
+**Play it now → [tetris.rocks](https://tetris.rocks/)**
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![No deps](https://img.shields.io/badge/frontend-zero%20deps-brightgreen)](#)
@@ -26,7 +28,11 @@ This one also happens to **cryptographically sign your high scores** so you can 
 - 🔍 **Zoom in/out / fit to screen** — board scales independently for tired eyes and tiny phones.
 - 🌑 **Plays offline** — PWA + service worker cache. Install it on your phone.
 - 🪪 **PGP-signed scoreboard receipts** — finish a game, drop your name/tagline/email, and either download a signed `.txt` you can verify with `gpg --verify`, or submit it to the public scoreboard.
-- 🛠️ **Tiny self-hostable backend** — Node + Fastify + SQLite on Fly.io. Holds the PGP private key as a secret. Public key in the repo at [`docs/PUBKEY.asc`](docs/PUBKEY.asc).
+- 🛠️ **Two self-hostable backends** — pick one:
+  - **PHP** ([`server-php/`](server-php/)) — drop into any shared PHP host (Siteground, DreamHost, Hostinger, etc.). Used in production at [tetris.rocks](https://tetris.rocks/).
+  - **Node + Fastify + SQLite** ([`server-node/`](server-node/)) — deploys to Fly.io with one command.
+
+  Both hold the PGP private key off-disk (above webroot / as a Fly secret) and expose the same `/api/*` HTTP surface. Public key in the repo at [`docs/PUBKEY.asc`](docs/PUBKEY.asc).
 - 0️⃣ **Zero frontend dependencies** — no React, no build step, no bundler. Just open `public/index.html`.
 
 ## Quickstart
@@ -91,7 +97,11 @@ tetris/
 │   │   ├── scoreboard.js    # talks to the server, falls back to localStorage
 │   │   └── storage.js       # settings persistence
 │   └── assets/favicon.svg
-├── server/                  # PGP signing + scoreboard API (Fly.io)
+├── server-php/              # PHP backend — the one running on tetris.rocks
+│   ├── api/index.php        # whole API in one file (PHP 7.4+)
+│   ├── api/.htaccess        # /api/* → index.php
+│   └── .htaccess            # webroot: HTTPS + caching + compression
+├── server-node/             # Node + Fastify + SQLite (Fly.io)
 │   ├── index.js
 │   ├── scripts/keygen.js    # generates a fresh PGP keypair
 │   ├── Dockerfile
@@ -132,7 +142,7 @@ Tetrises:    4
 Max combo:   5
 
 Theme:       modern
-Client:      tetris 1.0.0
+Client:      tetris 1.1.0
 Played at:   2026-06-14T12:18:03.122Z
 Public rank: #12
 

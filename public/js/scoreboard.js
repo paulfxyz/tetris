@@ -1,15 +1,34 @@
 // tetris — scoreboard.js
-// Talks to the backend (Fly.io) and falls back to localStorage when offline.
+// Talks to the backend over same-origin /api by default, or a configured remote URL.
+// Falls back to localStorage when offline / no server.
 
 const LOCAL_KEY = 'tetris:scores';
 
+// Same-origin /api works when:
+//   - the page is served over http(s) (not file://)
+//   - a backend (PHP at tetris.rocks, or Node) lives at /api on the same origin
+function sameOriginApiAvailable() {
+  try {
+    return typeof window !== 'undefined'
+      && /^https?:$/.test(window.location.protocol);
+  } catch { return false; }
+}
+
 export class Scoreboard {
   constructor() {
-    this.server = localStorage.getItem('tetris:server') || '';
+    this.override = (localStorage.getItem('tetris:server') || '').replace(/\/$/, '');
+    this.server = this.resolve();
+  }
+  resolve() {
+    if (this.override) return this.override;
+    return sameOriginApiAvailable() ? '/api' : '';
   }
   setServer(url) {
-    this.server = (url || '').replace(/\/$/, '');
-    localStorage.setItem('tetris:server', this.server);
+    const v = (url || '').replace(/\/$/, '');
+    this.override = v;
+    if (v) localStorage.setItem('tetris:server', v);
+    else localStorage.removeItem('tetris:server');
+    this.server = this.resolve();
   }
   serverAvailable() { return !!this.server; }
 
