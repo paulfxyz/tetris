@@ -162,6 +162,14 @@ export class Input {
   // because thumbs are imprecise.
   bindVPad() {
     if (!this.vpadEl) return;
+    // v1.5.6 — keep the pad alive while the user is touching ANY part
+    // of the vpad, including the grid gaps between buttons. Without this
+    // a finger landing in the small gap between, say, the rotate and right
+    // buttons would let the 3 s auto-hide timer fire while still mid-touch,
+    // and the pad would fade out from under the user's thumb.
+    this.vpadEl.addEventListener('pointerdown', () => {
+      if (this.revealVPad) this.revealVPad();
+    });
     this.vpadEl.querySelectorAll('.vbtn').forEach(btn => {
       const action = btn.dataset.action;
       let holdTimer, repeatTimer;

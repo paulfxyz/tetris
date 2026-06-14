@@ -2,6 +2,16 @@
 
 All notable changes to **tetris** will be documented here. Format inspired by [Keep a Changelog](https://keepachangelog.com/), versioning follows [SemVer](https://semver.org/).
 
+## [1.5.6] — 2026-06-14
+
+### Fixed
+- **Vpad reveal-on-touch is now reliable.** Two bugs combined: (1) the touch listener was bound to `#game-canvas`, but the canvas is pinned to the bottom of `.board-frame` and is smaller than the playfield area — touches in the strip above the canvas hit the frame, not the canvas, so no reveal. (2) Touches landing in the gaps between vpad buttons hit the `.vpad` div itself (which has `pointer-events: auto` while revealed) but didn't trigger any handler, so the 3 s auto-hide timer would fire while the user was still mid-touch. Fixes: the touchstart listener is now bound to `.board-frame` (full play container), and a `pointerdown` listener on `.vpad` itself keeps the pad alive whenever any part of it is touched.
+- **Start, pause, and game-over modals are now real full-screen takeovers on mobile.** The floating mobile-bar and vpad were bleeding through on top of the `.overlay` and native `<dialog>` backdrops in iOS Safari and Chrome iOS — a known WebKit quirk where `position: fixed` siblings can paint above the top-layer. A `MutationObserver` now toggles `body.dialog-open` whenever any `<dialog>` opens, and `body:has(.overlay:not([hidden]))` catches the title/pause/game-over overlay. Both selectors force `display: none` on the bar and vpad while a modal is up. Overlay backdrop also strengthened from `rgba(0,0,0,.72)` → `.85` and the native dialog backdrop from `.55` → `.78` with 8 px blur.
+- **Overlay z-index bumped from 50 → 60** so it sits above the mobile-bar (30) and vpad (25) on every browser, top-layer support or not.
+
+### Added
+- **Mobile heads-up on the title screen.** A small italic line under the cheat-sheet: *"tip: this game shines on tablet or laptop"*. Only shows on viewports ≤ 760 px and only on the title screen — never during gameplay, pause, or game over.
+
 ## [1.5.5] — 2026-06-14
 
 ### Changed

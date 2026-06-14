@@ -25,7 +25,7 @@ import { Scoreboard } from './scoreboard.js';
 // Bump this string on every release; it ends up inside every signed receipt
 // so users can prove which client version played the game. Pair it with the
 // version string in index.html for consistency.
-const CLIENT_VERSION = '1.5.5';
+const CLIENT_VERSION = '1.5.6';
 
 // Convenience: jQuery's $ but it's just querySelector.
 const $ = (q) => document.querySelector(q);
@@ -309,14 +309,22 @@ function titleScreen() {
   // v1.5.0 — show the right hint for the device. Touch-primary devices get
   // the gesture cheat-sheet; everyone else gets the keyboard cheat-sheet.
   const isTouch = matchMedia('(pointer: coarse)').matches;
+  const isMobile = matchMedia('(max-width: 760px)').matches;
   const hint = isTouch
     ? 'tap rotate · swipe ↔ move · drag ↓ soft · swipe ↑ drop · long-press hold'
     : '↑ rotate · ← → move · ↓ soft · space drop · C hold · P pause';
+  // v1.5.6 — mobile-only friendly heads-up. Touch tetris works, but the
+  // experience is genuinely better with a real keyboard. We say so once,
+  // on the title screen only, then never again.
+  const mobileTip = isMobile
+    ? '<small class="mobile-tip">tip: this game shines on tablet or laptop</small>'
+    : '';
   showOverlay(`
     <h1>tetris</h1>
     <p>drop, line, repeat.</p>
     <button class="cta" id="overlay-start">Press Start</button>
     <small>${hint}</small>
+    ${mobileTip}
   `);
   $('#overlay-start').addEventListener('click', startGame);
 }
@@ -383,10 +391,36 @@ function action(a) {
   }
 }
 
+// v1.5.6 — touch listener now binds to .board-frame (the full play
+// container) instead of just the canvas. The canvas is sized to integer
+// cells and pinned to the bottom of the frame, which leaves a strip of
+// non-canvas area above (between mobile-bar and the canvas top) where
+// touches were not registering. Binding to the frame means *any* touch
+// inside the playfield container reveals the vpad and is parsed as a
+// gesture. Gesture math is still relative to clientX/Y (viewport-based),
+// so we don't care that the target is now the frame instead of the canvas.
 const input = new Input({
-  boardEl: $('#game-canvas'),
+  boardEl: document.querySelector('.board-frame'),
   vpadEl: $('#vpad'),
   onAction: action,
+});
+
+// ---------------------------------------------------------------------------
+// Dialog open-state tracker (v1.5.6).
+// ---------------------------------------------------------------------------
+// Native <dialog>.showModal() puts the dialog in the browser's top layer,
+// which is supposed to render above every position:fixed element. iOS
+// Safari and Chrome iOS sometimes paint the vpad and floating mobile-bar
+// on top of the backdrop anyway — a long-known WebKit quirk around
+// `position: fixed` + top-layer interaction. We solve it the safe way:
+// observe any <dialog> opening, and toggle `body.dialog-open` so the CSS
+// can hide the conflicting floating chrome while a modal is up.
+const _dialogObserver = new MutationObserver(() => {
+  const anyOpen = !!document.querySelector('dialog[open]');
+  document.body.classList.toggle('dialog-open', anyOpen);
+});
+document.querySelectorAll('dialog').forEach(d => {
+  _dialogObserver.observe(d, { attributes: true, attributeFilter: ['open'] });
 });
 
 // ---------------------------------------------------------------------------

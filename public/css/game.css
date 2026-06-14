@@ -455,16 +455,22 @@ body.vpad-on .vpad { display: grid; }
     border-color: color-mix(in srgb, var(--color-accent) 60%, rgba(255, 255, 255, .14));
   }
 
-  /* OVERLAY (title / pause / game over) — fullscreen on mobile, solid bg. */
+  /* OVERLAY (title / pause / game over) — fullscreen on mobile, solid bg.
+   *
+   * v1.5.6 — z-index bumped from 50 → 60 (above the mobile-bar at 30 and
+   * vpad at 25), and we use `body:has(...)` below to suppress the vpad +
+   * mobile-bar entirely while the overlay is visible so the title /
+   * pause / game-over modal reads as a real 100 % takeover. The solid
+   * bg is also bumped to .85 for a more decisive dim. */
   .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, .72);
+    background: rgba(0, 0, 0, .85);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
     border-radius: 0;
     padding: 24px;
-    z-index: 50;
+    z-index: 60;
   }
   .overlay-card {
     padding: 20px 18px;
@@ -477,6 +483,30 @@ body.vpad-on .vpad { display: grid; }
   .overlay-card h1 { font-size: 24px; }
   .overlay-card p { font-size: 13px; }
   .overlay-card small { font-size: 10px; line-height: 1.5; }
+  /* v1.5.6 — friendly heads-up on mobile that the game is better on a
+   * real keyboard. Subtle, italic, slightly warmer color so it doesn't
+   * compete with the cheat-sheet `<small>` above it. */
+  .overlay-card .mobile-tip {
+    font-size: 10px;
+    font-style: italic;
+    color: color-mix(in srgb, var(--color-accent) 60%, var(--color-text-muted));
+    margin-top: 2px;
+    line-height: 1.4;
+  }
+
+  /* v1.5.6 — while a modal (start overlay OR a native dialog) is open,
+   * hide the floating mobile-bar and the vpad so the modal reads as a
+   * real full-screen takeover. iOS Safari/Chrome sometimes paint
+   * `position: fixed` siblings on top of the <dialog> top-layer; this
+   * forces them out. `body:has(.overlay:not([hidden]))` catches the
+   * title / pause / game-over screen; `body.dialog-open` (set from JS
+   * via MutationObserver) catches the settings + game-over dialogs. */
+  body:has(.overlay:not([hidden])) .mobile-bar,
+  body:has(.overlay:not([hidden])) .vpad,
+  body.dialog-open .mobile-bar,
+  body.dialog-open .vpad {
+    display: none !important;
+  }
 
   /* Footer hidden on mobile to keep the single-screen rule. */
   .footer { display: none; }

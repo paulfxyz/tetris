@@ -91,7 +91,15 @@ body {
   max-width: 480px; width: calc(100% - 32px);
   box-shadow: 0 20px 60px rgba(0,0,0,.4);
 }
-.dialog::backdrop { background: rgba(0,0,0,.55); backdrop-filter: blur(4px); }
+.dialog::backdrop {
+  /* v1.5.6 — strengthen the backdrop on mobile so the dialog reads as a
+   * full takeover even when iOS bleeds position:fixed siblings on top of
+   * the dialog top-layer. The JS-driven `body.dialog-open` rule in
+   * game.css also hides the vpad + mobile-bar entirely while we're up. */
+  background: rgba(0,0,0,.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
 .dialog-form { padding: 22px 24px; display: grid; gap: 14px; }
 .dialog-form h2 { margin: 0 0 4px; font-size: 18px; font-weight: 700; }
 .dialog-form fieldset {
