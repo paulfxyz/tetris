@@ -1,7 +1,7 @@
 // tetris — service worker
 // Cache-first for the small static bundle so the game works offline.
 
-const CACHE = 'tetris-v1.0.0';
+const CACHE = 'tetris-v1.2.0';
 const ASSETS = [
   './',
   'index.html',
@@ -18,6 +18,7 @@ const ASSETS = [
   'js/scoreboard.js',
   'js/storage.js',
   'assets/favicon.svg',
+  'assets/music.mp3',
 ];
 
 self.addEventListener('install', (e) => {

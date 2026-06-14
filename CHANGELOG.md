@@ -2,6 +2,19 @@
 
 All notable changes to **tetris** will be documented here. Format inspired by [Keep a Changelog](https://keepachangelog.com/), versioning follows [SemVer](https://semver.org/).
 
+## [1.2.0] — 2026-06-14
+
+### Added
+- **Real music!** Ships a bundled CC0 chiptune MP3 (“Happy Adventure (Loop)” by Bart Kelsey, public-domain, ~620 KB) played via a plain `<audio loop>` element. Replaces the v1.1.x procedural Korobeiniki Web Audio synth, which silently failed on many browsers due to autoplay restrictions and tab throttling. Toggling Music in Settings now reliably plays / pauses the loop.
+
+### Fixed
+- **Signed scoreboard receipts now actually sign.** The PHP backend resolved the private-key directory to `<webroot>/../private/`, which on Siteground's per-domain layout is `~/tetris.rocks/private/` — a different directory than the FTP-account-root `~/private/` where the keys lived. PHP now probes several candidate locations and uses whichever contains the key file. The deploy script also uploads keys to **both** locations as belt-and-suspenders. As a result the downloaded `.txt` is a real PGP cleartext-signed receipt, verifiable with `gpg --verify`.
+- `/api/health` now reports `private_dir` and `priv_key_present` so future key-misplacement issues are immediately visible.
+
+### Changed
+- Service worker cache bumped to `tetris-v1.2.0` and now precaches `assets/music.mp3` so the music plays offline too.
+- README version badge → 1.2.0.
+
 ## [1.1.3] — 2026-06-14
 
 ### Changed

@@ -44,7 +44,32 @@ const MAX_TAGLINE = 80;
 const MAX_EMAIL   = 160;
 const MAX_BODY    = 8192; // bytes
 
-$privateDir   = realpath(__DIR__ . '/../../private') ?: (__DIR__ . '/../../private');
+// Resolve the `/private/` directory by probing several candidate locations.
+// Shared-hosting layouts vary: on Siteground, FTP login lands in the account
+// home dir (~/private/) while the domain webroot sits at ~/<domain>/public_html/
+// — so `__DIR__/../../private` resolves to ~/<domain>/private, which may be empty.
+// We probe a list of candidates and pick the first that actually contains the
+// private key file.
+function resolve_private_dir(): string {
+    $candidates = [
+        __DIR__ . '/../../private',           // <webroot>/../private (per-domain)
+        __DIR__ . '/../../../private',        // <webroot>/../../private (account-root, Siteground)
+        __DIR__ . '/../../../../private',     // one more level up (some hosts)
+        ($_SERVER['HOME'] ?? '') . '/private', // $HOME/private when available
+    ];
+    foreach ($candidates as $cand) {
+        if (!$cand) continue;
+        if (is_file($cand . '/pgp-private.asc')) {
+            $real = realpath($cand);
+            if ($real) return $real;
+        }
+    }
+    // Fallback: first candidate (may be created below). Used by /health to
+    // report a sensible path even when no key is configured yet.
+    return realpath($candidates[0]) ?: $candidates[0];
+}
+
+$privateDir   = resolve_private_dir();
 $privKeyFile  = $privateDir . '/pgp-private.asc';
 $pubKeyFile   = $privateDir . '/pgp-public.asc';
 $scoresJsonl  = $privateDir . '/scores.jsonl';
@@ -337,6 +362,8 @@ try {
             'fingerprint' => $fingerprint,
             'backend' => $backend,
             'php' => PHP_VERSION,
+            'private_dir' => $privateDir,
+            'priv_key_present' => is_file($privKeyFile),
         ]);
     }
 
