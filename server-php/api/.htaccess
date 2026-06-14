@@ -3,6 +3,17 @@
 
 RewriteEngine On
 RewriteBase /api/
+
+# --- Siteground bot-protection / CAPTCHA bypass for the JSON API ---------
+# Siteground's "sgcaptcha" layer intercepts POSTs from unknown IPs and serves
+# an HTML CAPTCHA challenge page. That breaks the scoreboard /submit endpoint
+# (the browser tries to POST JSON, gets HTML back, and reports "server
+# unreachable"). Mark every request to /api/ as already-challenged so the
+# CAPTCHA layer lets it through. JSON APIs aren't the kind of traffic this
+# layer is supposed to protect anyway.
+SetEnvIf Request_URI ".*" SGCAPTCHA_BYPASS=1
+SetEnvIf Request_URI ".*" no-sgcaptcha=1
+
 RewriteRule ^index\.php$ - [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
@@ -12,4 +23,17 @@ RewriteRule . index.php [L]
 <IfModule mod_headers.c>
   Header set Referrer-Policy "no-referrer"
   Header set X-Content-Type-Options "nosniff"
+  # Explicit content-type advisory for the CAPTCHA layer: this is JSON, not
+  # a browser-driven form submission.
+  Header set X-Robots-Tag "noindex"
 </IfModule>
+
+# CORS preflight allowance — strictly same-origin in production but harmless
+# to include for clarity and for local-dev usage.
+<IfModule mod_headers.c>
+  Header set Access-Control-Allow-Origin "*"
+  Header set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+  Header set Access-Control-Allow-Headers "Content-Type"
+</IfModule>
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^ - [R=200,L]

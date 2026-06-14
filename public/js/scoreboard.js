@@ -89,10 +89,25 @@ export class Scoreboard {
     const url = this.server + (store ? '/submit' : '/sign');
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      credentials: 'same-origin',
+      headers: {
+        // Explicit Accept tells hosts (Siteground in particular) that this is
+        // an API call, not a browser-form submission — reduces the chance of
+        // hitting a bot-protection HTML challenge page.
+        'content-type': 'application/json',
+        'accept': 'application/json',
+        'x-requested-with': 'XMLHttpRequest',
+      },
       body: JSON.stringify(payload),
     });
+    // Bot-protection layers (Cloudflare, Siteground sgcaptcha) often serve a
+    // 200/202 HTML CAPTCHA page when they suspect a request. Detect that and
+    // throw a clean error so the caller falls back to the offline receipt.
+    const ctype = res.headers.get('content-type') || '';
     if (!res.ok) throw new Error(`server: ${res.status}`);
+    if (!ctype.includes('application/json')) {
+      throw new Error('server: non-JSON response (likely bot-challenge); using offline fallback');
+    }
     const data = await res.json();
     // Server kept the score → also keep a local copy for offline browsing.
     if (data.accepted) this.saveLocal(payload);

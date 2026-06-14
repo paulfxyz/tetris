@@ -41,6 +41,25 @@ const KEYMAP = {
   Escape: 'pause',
 };
 
+// Returns true if the user is typing in a form field. Used to suppress game
+// keybindings while the score-submit dialog is open — otherwise typing 'p',
+// 'c', 'x', 'z' in the Name field would trigger pause/hold/rotate and the
+// letter would be eaten by preventDefault().
+function isEditableTarget(el) {
+  if (!el) return false;
+  if (el.isContentEditable) return true;
+  const tag = el.tagName;
+  if (tag === 'TEXTAREA' || tag === 'SELECT') return true;
+  if (tag === 'INPUT') {
+    // Allow game keys when focus is on non-text inputs (checkboxes, radios,
+    // ranges) so the settings overlay doesn't break keyboard play.
+    const type = (el.type || 'text').toLowerCase();
+    const nonText = new Set(['checkbox', 'radio', 'range', 'button', 'submit', 'reset', 'file', 'color']);
+    return !nonText.has(type);
+  }
+  return false;
+}
+
 export class Input {
   constructor({ boardEl, vpadEl, onAction }) {
     this.boardEl = boardEl;       // the canvas element — captures touch
@@ -70,6 +89,13 @@ export class Input {
   // those and run our own DAS timer instead.
   bindKeyboard() {
     window.addEventListener('keydown', (e) => {
+      // BUGFIX: when the user is typing in a text field (e.g. the score-submit
+      // form's Name / Tagline / Email inputs), we must NOT intercept their
+      // keystrokes. Otherwise letters mapped to game actions — 'p' (pause),
+      // 'c' (hold), arrow keys, etc. — get swallowed by preventDefault() and
+      // never reach the input. Bail out if the focused element is editable.
+      if (isEditableTarget(e.target) || isEditableTarget(document.activeElement)) return;
+
       const a = KEYMAP[e.code];
       if (!a) return;
       e.preventDefault();
@@ -84,6 +110,8 @@ export class Input {
     });
 
     window.addEventListener('keyup', (e) => {
+      // Mirror the keydown guard: don't track keys pressed inside form fields.
+      if (isEditableTarget(e.target) || isEditableTarget(document.activeElement)) return;
       this.held.delete(e.code);
       const a = KEYMAP[e.code];
       if (a === 'left' || a === 'right') this.stopDAS();

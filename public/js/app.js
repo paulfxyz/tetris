@@ -25,7 +25,7 @@ import { Scoreboard } from './scoreboard.js';
 // Bump this string on every release; it ends up inside every signed receipt
 // so users can prove which client version played the game. Pair it with the
 // version string in index.html for consistency.
-const CLIENT_VERSION = '1.1.1';
+const CLIENT_VERSION = '1.1.2';
 
 // Convenience: jQuery's $ but it's just querySelector.
 const $ = (q) => document.querySelector(q);
@@ -158,7 +158,9 @@ function startGame() {
   hideOverlay();
   // Audio contexts on iOS/Safari only unlock after a user gesture — this
   // click is that gesture, so we call sound.ensure() here, not on boot.
+  // The same gesture also starts music if the user has it enabled.
   sound.ensure();
+  if (settings.get('music')) sound.setMusic(true);
 }
 
 titleScreen();
@@ -236,6 +238,7 @@ settingsDialog.addEventListener('close', () => {
     server: (fd.get('server') || '').toString().trim(),
   });
   sound.enabled = settings.get('sfx');
+  sound.setMusic(settings.get('music'));
   scoreboard.setServer(settings.get('server'));
   applySettings();
 });
@@ -249,7 +252,9 @@ $('#btn-zoom-in').addEventListener('click', () => { settings.set('zoom', Math.mi
 $('#btn-zoom-out').addEventListener('click', () => { settings.set('zoom', Math.max(60, settings.get('zoom') - 10)); applySettings(); });
 $('#btn-zoom-reset').addEventListener('click', () => { settings.set('fit', true); fitToScreen(); });
 
-// Sync sound + scoreboard with persisted settings at boot.
+// Sync sound + scoreboard with persisted settings at boot. Music is wired
+// up but only actually starts after the first user gesture ("Press Start"
+// click) because the AudioContext can't be unlocked before that on iOS/Safari.
 sound.enabled = settings.get('sfx');
 scoreboard.setServer(settings.get('server'));
 
@@ -380,6 +385,7 @@ function loop(now) {
     // Game-over detection — fire once when the engine flips the flag.
     if (engine.gameOver && !overlayEl.dataset.over) {
       overlayEl.dataset.over = '1';
+      sound.setMusic(false);   // silence the loop so the dying-fall arpeggio plays clean
       sound.over();
       gameOverScreen();
     } else if (!engine.gameOver) {

@@ -2,6 +2,26 @@
 
 All notable changes to **tetris** will be documented here. Format inspired by [Keep a Changelog](https://keepachangelog.com/), versioning follows [SemVer](https://semver.org/).
 
+## [1.1.2] — 2026-06-14
+
+### Added
+- **Music!** Procedural *Korobeiniki* (the classic Game Boy Tetris theme — public-domain Russian folk song from 1861) rendered live via Web Audio. Two-voice arrangement: square-wave lead + triangle-wave bass. Toggle in Settings → Music. Zero KB shipped — generated entirely from a note-array at runtime.
+- **New Modern-theme animations**, all strictly in-place (no horizontal drift):
+  - `cta-heartbeat` on the Press Start button: cardiac two-beat pulse (scale + glow).
+  - `brand-breathe` on the logo: gentle breathing replaces the previous full 360° rotation.
+  - `aurora-breathe` wash behind the board.
+  - `stats-glow` staggered pulse on score/lines/level/time values.
+  - `hud-underline-pulse` animated accent under each HUD label.
+  - `overlay-glow` subtle vignette pulse on the Press Start / Pause / Game Over card.
+
+### Fixed
+- **Name input swallowed letters**: typing “p”, “c”, “x”, “z”, etc. in the score-submit form was triggering pause / hold / rotate because the global keyboard handler intercepted every keydown. Input now bails out when focus is on a text field.
+- **Press-Start animation slid off to the right** (`translateX` shimmer). Replaced with a contained heartbeat scale; nothing leaves the button bounds anymore.
+- **“Server unreachable” on score submit**: Siteground’s `sgcaptcha` bot-protection layer was serving HTML CAPTCHA pages in response to JSON POSTs from new IPs. Added explicit `Accept: application/json` + `X-Requested-With: XMLHttpRequest` headers, a content-type check that throws clean on HTML responses, and an `.htaccess` directive to mark `/api/*` as already-challenged.
+
+### Changed
+- README version badge now links to the matching GitHub release.
+
 ## [1.1.0] — 2026-06-14
 
 ### Added
