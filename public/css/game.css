@@ -141,22 +141,24 @@ body.vpad-on .vpad { display: grid; }
   .game-wrap { gap: 10px; }
 }
 
-/* Modern theme — overlay CTA (Press Start) uses a CARDIAC HEARTBEAT.
- * The previous shimmer used translateX(100%) which made the highlight slide
- * off to the right of the button; users perceived it as the layout breaking.
- * Replaced with a contained, in-place heartbeat: scale + glow that breathes
- * around the button without ever shifting horizontally. The two-beat curve
- * (strong-pause-soft-pause) mimics a real cardiac rhythm. */
+/* Modern theme — overlay CTA (Press Start) uses a SHAKE animation.
+ * A symmetric left-right wobble with zero net displacement: the button
+ * starts and ends at exactly the same X, and swings briefly to each side
+ * by only a few pixels. Followed by a long rest phase so the motion stays
+ * an attention-grabber rather than a distraction. The translation amount
+ * is small enough that the button never approaches its container edges. */
 html[data-theme="modern"] .overlay-card .cta {
   position: relative;
   transform-origin: center;
 }
-@keyframes cta-heartbeat {
-  0%   { transform: scale(1);     box-shadow: 0 0 18px color-mix(in srgb, var(--color-accent) 28%, transparent); }
-  14%  { transform: scale(1.045); box-shadow: 0 0 28px color-mix(in srgb, var(--color-accent) 55%, transparent); }
-  28%  { transform: scale(1);     box-shadow: 0 0 18px color-mix(in srgb, var(--color-accent) 28%, transparent); }
-  42%  { transform: scale(1.025); box-shadow: 0 0 22px color-mix(in srgb, var(--color-accent) 40%, transparent); }
-  60%, 100% { transform: scale(1); box-shadow: 0 0 18px color-mix(in srgb, var(--color-accent) 28%, transparent); }
+@keyframes cta-shake {
+  0%, 70%, 100% { transform: translateX(0); }
+  74%  { transform: translateX(-4px); }
+  78%  { transform: translateX(4px); }
+  82%  { transform: translateX(-3px); }
+  86%  { transform: translateX(3px); }
+  90%  { transform: translateX(-2px); }
+  94%  { transform: translateX(2px); }
 }
 
 /* =====================================================================
@@ -222,24 +224,23 @@ html[data-theme="modern"] #next-canvas { animation-delay: -2.5s; }
   50%      { transform: translateY(-2px); }
 }
 
-/* CTA background gradient — a calm sweep that LOOPS inside the button
- * (small horizontal swing, never reaching the edges), so motion stays
- * inside the bounds. Combined with cta-heartbeat above. */
+/* CTA gradient + the shake animation. The gradient is static (no animated
+ * background-position) so the only motion is the controlled shake. Glow
+ * pulses gently along with each shake to give the impulse some weight. */
 html[data-theme="modern"] .overlay-card .cta {
   background: linear-gradient(135deg,
     var(--color-accent) 0%,
     color-mix(in srgb, var(--color-accent) 60%, #9b5cff) 50%,
     var(--color-accent) 100%);
-  background-size: 220% 220%;
-  background-position: 50% 50%;
+  box-shadow: 0 0 22px color-mix(in srgb, var(--color-accent) 38%, transparent);
   animation:
-    cta-heartbeat 1.6s ease-in-out infinite,
-    cta-gradient-loop 6s ease-in-out infinite;
-  will-change: transform, box-shadow, background-position;
+    cta-shake 2.4s ease-in-out infinite,
+    cta-glow 2.4s ease-in-out infinite;
+  will-change: transform, box-shadow;
 }
-@keyframes cta-gradient-loop {
-  0%, 100% { background-position: 35% 50%; }
-  50%      { background-position: 65% 50%; }
+@keyframes cta-glow {
+  0%, 70%, 100% { box-shadow: 0 0 18px color-mix(in srgb, var(--color-accent) 30%, transparent); }
+  85%           { box-shadow: 0 0 32px color-mix(in srgb, var(--color-accent) 60%, transparent); }
 }
 
 /* Stats values glow staggered — calm equalizer feel down the right rail. */

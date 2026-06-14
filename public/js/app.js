@@ -25,7 +25,7 @@ import { Scoreboard } from './scoreboard.js';
 // Bump this string on every release; it ends up inside every signed receipt
 // so users can prove which client version played the game. Pair it with the
 // version string in index.html for consistency.
-const CLIENT_VERSION = '1.1.2';
+const CLIENT_VERSION = '1.1.3';
 
 // Convenience: jQuery's $ but it's just querySelector.
 const $ = (q) => document.querySelector(q);
@@ -220,6 +220,18 @@ $('#btn-settings').addEventListener('click', () => {
 // Live-update the zoom output label as the range slider moves.
 settingsDialog.querySelector('input[name=zoom]').addEventListener('input', (e) => {
   settingsDialog.querySelector('output[name=zoom-out]').value = e.target.value + '%';
+});
+// Live-toggle music the moment the checkbox changes (without waiting for
+// Save). Clicking the checkbox is a valid user gesture, which is what the
+// AudioContext needs to unlock on iOS/Safari — so the music can actually
+// start playing here even if the player hasn't yet hit Press Start.
+settingsDialog.querySelector('input[name=music]').addEventListener('change', (e) => {
+  sound.ensure();
+  sound.setMusic(e.target.checked);
+});
+// Same for SFX — toggle live so the player hears the effect on rotate/move.
+settingsDialog.querySelector('input[name=sfx]').addEventListener('change', (e) => {
+  sound.enabled = e.target.checked;
 });
 // On close, if the user clicked "Save", harvest form values and persist.
 // <dialog>'s returnValue is set by the <button value="save"> that closed it.

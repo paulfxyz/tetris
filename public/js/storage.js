@@ -25,7 +25,7 @@ const DEFAULTS = {
   fit: false,          // auto-fit to viewport on load
   vpadMode: 'auto',    // auto | always | never  (auto = show on touch devices)
   sfx: true,
-  music: false,        // reserved — there's no music track yet
+  music: true,         // procedural Korobeiniki loop, on by default in v1.1.3+
   server: '',          // override scoreboard URL; empty = auto-detect same-origin
   identity: { name: '', tagline: '', email: '' },  // last submitted identity
 };

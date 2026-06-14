@@ -2,6 +2,16 @@
 
 All notable changes to **tetris** will be documented here. Format inspired by [Keep a Changelog](https://keepachangelog.com/), versioning follows [SemVer](https://semver.org/).
 
+## [1.1.3] — 2026-06-14
+
+### Changed
+- **Press Start CTA animation** swapped from "heartbeat scale" to a **shake** — a symmetric left/right wobble (±4px) with a long rest phase. Zero net displacement; the button starts and ends at exactly the same X.
+- **Music is on by default.** New users get Korobeiniki the moment they hit Press Start. Existing users whose `music` preference is already saved keep their choice.
+
+### Fixed
+- **Music wasn't actually starting** for most users. The Settings dialog now toggles music *live* the moment the checkbox changes (instead of only after pressing Save). Clicking the checkbox is itself a user gesture, which is what browsers require to unlock the AudioContext.
+- Same live-toggle now applies to the SFX checkbox.
+
 ## [1.1.2] — 2026-06-14
 
 ### Added
