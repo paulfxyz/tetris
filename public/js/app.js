@@ -25,7 +25,7 @@ import { Scoreboard } from './scoreboard.js';
 // Bump this string on every release; it ends up inside every signed receipt
 // so users can prove which client version played the game. Pair it with the
 // version string in index.html for consistency.
-const CLIENT_VERSION = '1.4.2';
+const CLIENT_VERSION = '1.4.3';
 
 // Convenience: jQuery's $ but it's just querySelector.
 const $ = (q) => document.querySelector(q);
@@ -133,13 +133,29 @@ function availableBoardWidth() {
 
   const stageRect = stage.getBoundingClientRect();
   const isMobile = matchMedia('(max-width: 760px)').matches;
+
+  // Board-frame's own horizontal padding + border eats into the canvas width.
+  // Pre-v1.4.3 we only subtracted this from the HEIGHT budget, so the canvas
+  // (at --board-w) overflowed the frame's right edge by 18px (8+1 each side).
+  // Subtract it here too — matches availableBoardHeight()'s pattern.
+  let framePadX = 0;
+  const frame = wrap.querySelector(':scope > .board-frame');
+  if (frame) {
+    const fcs = getComputedStyle(frame);
+    framePadX = parseFloat(fcs.paddingLeft || 0) + parseFloat(fcs.paddingRight || 0)
+              + parseFloat(fcs.borderLeftWidth || 0) + parseFloat(fcs.borderRightWidth || 0);
+  }
+
   if (isMobile) {
-    return Math.max(BOARD_MIN_H / BOARD_ASPECT, Math.min(stageRect.width, window.innerWidth * 0.92));
+    const stageCs = getComputedStyle(stage);
+    const padX = parseFloat(stageCs.paddingLeft || 0) + parseFloat(stageCs.paddingRight || 0);
+    const budget = Math.min(stageRect.width - padX, window.innerWidth * 0.92);
+    return Math.max(BOARD_MIN_H / BOARD_ASPECT, budget - framePadX);
   }
   const cs = getComputedStyle(wrap);
   const hudW = parseFloat(cs.getPropertyValue('--hud-w')) || 130;
   const gap = parseFloat(cs.getPropertyValue('--gap')) || 18;
-  return Math.max(BOARD_MIN_H / BOARD_ASPECT, stageRect.width - 2 * hudW - 2 * gap);
+  return Math.max(BOARD_MIN_H / BOARD_ASPECT, stageRect.width - 2 * hudW - 2 * gap - framePadX);
 }
 
 // Pick the largest board height that satisfies both budgets, then snap to grid.

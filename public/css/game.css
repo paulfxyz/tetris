@@ -19,8 +19,13 @@
   --gap: clamp(8px, calc(var(--board-h) * .03), 22px);
 
   display: grid;
-  grid-template-columns: var(--hud-w) var(--board-w) var(--hud-w);
+  /* v1.4.3: middle column is `auto` (not `var(--board-w)`) so .board-frame
+   * shrink-wraps tightly around its canvas. Otherwise, with global border-box
+   * box-sizing, the frame's content area = --board-w minus 18px (padding+border),
+   * so the canvas (at --board-w) would overflow the frame's right edge by ~18px. */
+  grid-template-columns: var(--hud-w) auto var(--hud-w);
   gap: var(--gap);
+  justify-content: center;
   /* align-items: start makes HUD columns match the board's intrinsic height
    * instead of stretching to the tallest sibling. Combined with the board
    * canvas being height: var(--board-h), this guarantees the row's effective
@@ -102,6 +107,12 @@
   border: 1px solid var(--color-border);
   border-radius: 10px;
   padding: 8px;
+  /* v1.4.3: width:max-content + overflow:hidden together guarantee the frame
+   * is sized exactly to its canvas (canvas drives width, frame's padding adds
+   * to outer width) AND any future bleed-past-edge cannot escape the rounded
+   * border. Fixes the right-overflow bug where cells were drawn past the frame. */
+  width: max-content;
+  overflow: hidden;
   backdrop-filter: blur(10px);
   box-shadow: 0 10px 30px rgba(0,0,0,.25);
 }
@@ -129,10 +140,14 @@ html[data-theme="color"] .hud-block { border-radius: 4px; box-shadow: inset 0 0 
  * The full-board dim+blur backdrop. .overlay-card is a properly styled
  * floating card centered inside it — not a bare grid — so the Press Start
  * screen reads as a real modal: padded, rounded, bordered, glowed. */
+/* v1.4.3: solid rgba background BEFORE color-mix() so iOS Safari (which can
+ * fail color-mix() silently and end up transparent → invisible overlay) has
+ * a reliable fallback. Same for the card. */
 .overlay {
   position: absolute; inset: 8px;
   display: flex; align-items: center; justify-content: center;
   border-radius: 8px;
+  background: rgba(0, 0, 0, .55);
   background: color-mix(in srgb, var(--color-board-bg) 78%, transparent);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -148,6 +163,7 @@ html[data-theme="color"] .hud-block { border-radius: 4px; box-shadow: inset 0 0 
   width: min(260px, calc(100% - 32px));
   padding: 24px 22px 22px;
   border-radius: 14px;
+  background: rgba(20, 20, 24, .92);
   background: color-mix(in srgb, var(--color-surface) 92%, transparent);
   border: 1px solid var(--color-border);
   box-shadow:
@@ -236,21 +252,28 @@ body.vpad-on .vpad { display: grid; }
     justify-content: flex-start;
   }
 
-  /* Game-wrap on mobile: HUD strip on row 1, board on row 2. */
+  /* Game-wrap on mobile: HUD strip on row 1, board on row 2.
+   * v1.4.3: cols=auto + justify-items:center so .board-frame shrink-wraps
+   * its canvas instead of stretching the full stage width (the old 1fr made
+   * the frame much wider than the canvas, leaving a mostly-empty frame on
+   * iPhone). The HUD strip is explicitly width:100% below so it still spans
+   * edge-to-edge above the board. */
   .game-wrap {
-    grid-template-columns: 1fr;
+    grid-template-columns: auto;
     grid-template-rows: auto auto;
     gap: 8px;
     width: 100%;
     align-items: stretch;
+    justify-content: center;
+    justify-items: center;
   }
 
   /* Both HUD strips share grid-row 1. We use display:contents to flatten
    * .hud-left and .hud-right into the grid, then drop them into a flex
    * pseudo-row via a single CSS rule on the wrap itself: each .hud becomes
    * a flex child of the wrap, side-by-side on row 1. */
-  .hud-left  { grid-row: 1; grid-column: 1; }
-  .hud-right { grid-row: 1; grid-column: 1; pointer-events: none; }
+  .hud-left  { grid-row: 1; grid-column: 1; width: 100%; }
+  .hud-right { grid-row: 1; grid-column: 1; pointer-events: none; width: 100%; }
   .hud-right .hud-block { pointer-events: auto; }
   .game-wrap > .board-frame { grid-row: 2; }
 
@@ -331,10 +354,14 @@ body.vpad-on .vpad { display: grid; }
     margin: 0 auto;
   }
   body.vpad-on .vpad { display: grid; }
+  /* v1.4.3: shrink vpad buttons so the playground gets ~40px more vertical
+   * room. iPhone screenshots showed buttons taking ~145px of two-row vpad
+   * height before — now ~96px, giving the board more cells. */
+  .vpad { gap: 6px; }
   .vbtn {
-    height: clamp(52px, 9.5dvh, 72px);
-    font-size: clamp(20px, 5vw, 26px);
-    border-radius: 12px;
+    height: clamp(40px, 7dvh, 56px);
+    font-size: clamp(18px, 4.5vw, 22px);
+    border-radius: 10px;
     border-width: 1px;
   }
   .vbtn-drop {
@@ -343,8 +370,23 @@ body.vpad-on .vpad { display: grid; }
     border-color: color-mix(in srgb, var(--color-accent) 50%, var(--color-border));
   }
 
-  /* Overlay card — nicely sized for portrait phones. */
-  .overlay-card { padding: 18px 16px; width: min(240px, calc(100% - 24px)); gap: 12px; }
+  /* Overlay card — nicely sized for portrait phones.
+   * v1.4.3: drop the backdrop-filter blur on mobile (unreliable on iOS Safari,
+   * sometimes makes the entire overlay render invisible) and use a solid
+   * background so "Press Start" is always visible. */
+  .overlay {
+    background: rgba(0, 0, 0, .65);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .overlay-card {
+    padding: 18px 16px;
+    width: min(240px, calc(100% - 24px));
+    gap: 12px;
+    background: rgba(20, 20, 24, .96);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
 
   /* Footer hidden on mobile to keep the single-screen rule. */
   .footer { display: none; }
