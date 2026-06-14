@@ -2,6 +2,21 @@
 
 All notable changes to **tetris** will be documented here. Format inspired by [Keep a Changelog](https://keepachangelog.com/), versioning follows [SemVer](https://semver.org/).
 
+## [1.3.0] — 2026-06-14
+
+### Fixed
+- **Pixel-perfect zoom across every device.** The play grid (10 cols × 20 rows) now stays exactly inside the board frame at every zoom level. Previous versions had two failure modes when zooming: the bottom row could either clip below the frame, or leave an empty strip under it — caused by `--board-h` taking a non-integer-times-20 value, so the renderer's cell size (`canvas.width / 10`) had a fractional residual.
+- **Grid-locked sizing.** `--board-h` is now always snapped to a multiple of `ROWS` (= 20). That makes each cell an integer number of CSS pixels, so 20×cell lands precisely on the bottom edge of the canvas regardless of viewport or zoom multiplier.
+- **Honest mobile reservation.** Vertical budget on mobile is measured from the actual rendered HUD + vpad heights via DOM rects, instead of guessing with a hardcoded reserve. Phones, tablets, and shrunken windows all converge on the largest grid-aligned board that fits.
+- **No more independent mobile clamps.** Mobile no longer applies separate `min(width, 80vw)` and `min(height, 160vw)` to the canvas — those broke the 1:2 ratio when one axis clamped but the other didn't. JS sizes the board to fit the viewport, CSS just inherits.
+- **Renderer bitmap stays in lockstep.** After every `applyBoardSize()`, the renderer re-syncs its DPR-scaled bitmap on a double `requestAnimationFrame` so layout has fully flushed before `getBoundingClientRect()` is read.
+
+### Changed
+- `BOARD_MIN_H = 280` (was 360) so very tight viewports can still show 14 px cells.
+- Resize/orientationchange handlers are now debounced via rAF.
+- Service worker cache bumped to `tetris-v1.3.0`.
+- README badge → 1.3.0.
+
 ## [1.2.2] — 2026-06-14
 
 ### Fixed

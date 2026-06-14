@@ -14,7 +14,7 @@
 // module. That's fine — the other modules know about nothing.
 // ============================================================================
 
-import { Engine } from './engine.js';
+import { Engine, ROWS } from './engine.js';
 import { Renderer } from './renderer.js';
 import { Input } from './input.js';
 import { Background } from './background.js';
@@ -25,7 +25,7 @@ import { Scoreboard } from './scoreboard.js';
 // Bump this string on every release; it ends up inside every signed receipt
 // so users can prove which client version played the game. Pair it with the
 // version string in index.html for consistency.
-const CLIENT_VERSION = '1.2.2';
+const CLIENT_VERSION = '1.3.0';
 
 // Convenience: jQuery's $ but it's just querySelector.
 const $ = (q) => document.querySelector(q);
@@ -35,61 +35,125 @@ const $ = (q) => document.querySelector(q);
 // ---------------------------------------------------------------------------
 // Persisted preferences live in localStorage (via storage.js). They control:
 //   - <html data-theme=…> and <html data-mode=…> (CSS themes pick this up)
-// SIZING MODEL (post-v1.2.1 rewrite)
-// ---------------------------------
+// SIZING MODEL (v1.3.0 — pixel-perfect rewrite)
+// --------------------------------------------
 // One source of truth: --board-h on .game-wrap, in CSS pixels.
 // Everything else — canvas, HUD widths, gap — is derived in game.css.
 //
-//   actual_board_h = fittedBaseHeight * zoomMultiplier
+//   actual_board_h = snapToGrid(fittedBaseHeight * zoomMultiplier)
 //
-// where:
-//   fittedBaseHeight = computed by computeFittedHeight() based on the
-//     available stage area (stage rect minus padding, accounting for the
-//     virtual pad if visible). Clamped to a sane min/max.
-//   zoomMultiplier   = settings.zoom / 100, range 0.6–1.6.
+// THE KEY INSIGHT (why prior versions had drift on zoom):
+// The play grid is 10 cols × ROWS rows. The renderer draws each cell at
+//   cell = canvas.width / 10.
+// For the playfield to align EXACTLY with the board frame top-and-bottom,
+// --board-h MUST be a multiple of ROWS (= 20) so cell is an integer number
+// of CSS pixels. Otherwise the 20×cell stack either stops short of the
+// bottom (empty zone under the last row) or overflows past it (bottom row
+// clipped by the frame). Snapping --board-h to a 20-row grid eliminates
+// both failure modes for every zoom level on every device.
 //
-// Because the canvas is sized in real CSS pixels (no transform: scale), the
-// renderer's bitmap (set by resize() = CSS width × DPR) is always coherent
-// with getBoundingClientRect() — no smear trails, no empty-space mismatch.
+// We also measure the actual rendered chrome (page header, HUDs, vpad) via
+// real DOM rects instead of guessing with a hardcoded mobile reservation.
 const BOARD_ASPECT = 2;          // height / width
-const BOARD_MIN_H = 360;          // never go below this even on tiny screens
-const BOARD_MAX_H = 920;          // never balloon past this on huge monitors
+const BOARD_MIN_H = ROWS * 14;    // 280 — never go below 14 px cells
+const BOARD_MAX_H = ROWS * 46;    // 920 — never balloon past 46 px cells
 
-function computeFittedHeight() {
+// Snap a board height down to the nearest multiple of ROWS so each cell
+// is an integer number of CSS pixels. Returns an integer >= ROWS.
+function snapToGrid(h) {
+  const cell = Math.max(1, Math.floor(h / ROWS));
+  return cell * ROWS;
+}
+
+// outerH — element's box height including margins. Returns 0 if hidden.
+function outerH(el) {
+  if (!el) return 0;
+  const r = el.getBoundingClientRect();
+  if (!r.height) return 0;
+  const cs = getComputedStyle(el);
+  return r.height + parseFloat(cs.marginTop || 0) + parseFloat(cs.marginBottom || 0);
+}
+
+// Vertical budget available for the board itself, inside .stage.
+function availableBoardHeight() {
   const stage = document.querySelector('.stage');
-  const rect = stage.getBoundingClientRect();
-  // Reserve room for HUD blocks above/below the board on mobile (~140px),
-  // or the side HUDs on desktop (no vertical cost). On mobile the layout
-  // stacks, so vertical budget is reduced.
+  const wrap = document.getElementById('game-wrap');
+  if (!stage || !wrap) return BOARD_MIN_H;
+
+  const stageRect = stage.getBoundingClientRect();
+  const cs = getComputedStyle(stage);
+  const padY = parseFloat(cs.paddingTop || 0) + parseFloat(cs.paddingBottom || 0);
+
+  // Subtract every sibling of .game-wrap inside .stage (e.g. vpad on mobile).
+  let chromeY = padY;
+  for (const child of stage.children) {
+    if (child === wrap) continue;
+    chromeY += outerH(child);
+  }
+
+  // Mobile only: HUDs stack ABOVE and BELOW the board inside .game-wrap.
+  // Measure them directly instead of guessing a reserve.
   const isMobile = matchMedia('(max-width: 760px)').matches;
-  const vpadOn = document.body.classList.contains('vpad-on');
-  const reservedY = (isMobile ? 220 : 24) + (vpadOn && isMobile ? 140 : 0);
-  const availH = Math.max(BOARD_MIN_H, rect.height - reservedY);
+  if (isMobile) {
+    const huds = wrap.querySelectorAll(':scope > .hud');
+    for (const hud of huds) chromeY += outerH(hud);
+    const wrapCs = getComputedStyle(wrap);
+    const rowGap = parseFloat(wrapCs.rowGap || wrapCs.gap || 0);
+    if (rowGap) chromeY += rowGap * Math.max(0, wrap.children.length - 1);
+  }
 
-  // Horizontal budget: on desktop the board competes with two HUDs (≈330px)
-  // and gaps. The widest the board can be is (available width − sidecar room)
-  // — then height = width × 2.
-  const sidecarsAndGaps = isMobile ? 24 : 340;
-  const availW = Math.max(BOARD_MIN_H / BOARD_ASPECT, rect.width - sidecarsAndGaps);
-  const availHFromW = availW * BOARD_ASPECT;
+  return Math.max(BOARD_MIN_H, stageRect.height - chromeY);
+}
 
-  return Math.max(BOARD_MIN_H, Math.min(BOARD_MAX_H, availH, availHFromW));
+// Horizontal budget for the board. On desktop the two HUD columns + two
+// grid gaps share the row, so subtract them. On mobile the board uses the
+// full stage width (clamped to a small viewport-edge inset).
+function availableBoardWidth() {
+  const stage = document.querySelector('.stage');
+  const wrap = document.getElementById('game-wrap');
+  if (!stage || !wrap) return BOARD_MIN_H / BOARD_ASPECT;
+
+  const stageRect = stage.getBoundingClientRect();
+  const isMobile = matchMedia('(max-width: 760px)').matches;
+  if (isMobile) {
+    return Math.max(BOARD_MIN_H / BOARD_ASPECT, Math.min(stageRect.width, window.innerWidth * 0.92));
+  }
+  const cs = getComputedStyle(wrap);
+  const hudW = parseFloat(cs.getPropertyValue('--hud-w')) || 130;
+  const gap = parseFloat(cs.getPropertyValue('--gap')) || 18;
+  return Math.max(BOARD_MIN_H / BOARD_ASPECT, stageRect.width - 2 * hudW - 2 * gap);
+}
+
+// Pick the largest board height that satisfies both budgets, then snap to grid.
+function computeFittedHeight() {
+  const fromH = availableBoardHeight();
+  const fromW = availableBoardWidth() * BOARD_ASPECT;
+  const raw = Math.min(fromH, fromW, BOARD_MAX_H);
+  return Math.max(BOARD_MIN_H, snapToGrid(raw));
 }
 
 function applyBoardSize() {
   const wrap = document.getElementById('game-wrap');
+  if (!wrap) return;
   const s = settings.state;
   const base = computeFittedHeight();
   const z = (s.zoom || 100) / 100;
-  // Hard cap: even if the user zoomed in past what fits, never let the board
-  // exceed the viewport — otherwise the bottom rows of the play grid clip out
-  // of the board frame. Cap at 95% of stage height as a safety margin.
-  const stage = document.querySelector('.stage').getBoundingClientRect();
-  const ceiling = Math.max(BOARD_MIN_H, stage.height * 0.95);
-  const boardH = Math.round(Math.min(base * z, ceiling, BOARD_MAX_H));
+  // Cap zoom-in at the available budget so the bottom row can never clip
+  // out of the frame. Same math as the fitted base — so it stays grid-aligned.
+  const ceilingRaw = Math.min(availableBoardHeight(), availableBoardWidth() * BOARD_ASPECT, BOARD_MAX_H);
+  const ceiling = Math.max(BOARD_MIN_H, snapToGrid(ceilingRaw));
+  const target = Math.min(base * z, ceiling);
+  const boardH = Math.max(BOARD_MIN_H, snapToGrid(target));
   wrap.style.setProperty('--board-h', boardH + 'px');
-  // Tell the renderer to re-sync its bitmap on the next frame (after layout).
-  requestAnimationFrame(() => { if (typeof renderer !== 'undefined') renderer.resize(); });
+  // Renderer's bitmap must follow the new CSS size. Double-rAF so we wait
+  // for both: style applied + layout flushed. Otherwise getBoundingClientRect()
+  // inside renderer.resize() returns the previous width and we get a brief
+  // mismatch on the first frame after zoom.
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      if (typeof renderer !== 'undefined') renderer.resize();
+    });
+  });
 }
 
 //   - --zoom CSS variable on #game-wrap (zoom in/out, multiplier)
@@ -118,8 +182,13 @@ function fitToScreen() {
 
 // Keep the board in sync when the viewport changes (resize, orientation flip,
 // browser UI bars showing/hiding, keyboard appearing).
-window.addEventListener('resize', () => applyBoardSize());
-window.addEventListener('orientationchange', () => applyBoardSize());
+let _resizeRaf = 0;
+function scheduleApplyBoardSize() {
+  if (_resizeRaf) cancelAnimationFrame(_resizeRaf);
+  _resizeRaf = requestAnimationFrame(() => { _resizeRaf = 0; applyBoardSize(); });
+}
+window.addEventListener('resize', scheduleApplyBoardSize);
+window.addEventListener('orientationchange', scheduleApplyBoardSize);
 
 // ---------------------------------------------------------------------------
 // Boot
