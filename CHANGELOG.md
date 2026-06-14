@@ -2,6 +2,14 @@
 
 All notable changes to **tetris** will be documented here. Format inspired by [Keep a Changelog](https://keepachangelog.com/), versioning follows [SemVer](https://semver.org/).
 
+## [1.5.3] — 2026-06-14
+
+### Fixed
+- **Mobile: vpad now actually anchors to the bottom of the screen.** On iOS Safari with `html, body { position: fixed; height: 100% }`, the body locks to the *layout* viewport (the larger one that ignores Safari's bottom chrome) so `position: fixed; bottom: 0` was painting ~200 px above the visible bottom edge of the screen. Switched the lock to `height: 100dvh` so the body tracks the *visual* viewport, and `bottom: env(safe-area-inset-bottom) + 2px` now lands the vpad just above the home-indicator as intended.
+
+### Changed
+- **Mobile top bar tucked tighter to the status bar.** Dropped the extra `+ 6px` padding above the safe-area inset — the chip now starts at `max(4px, env(safe-area-inset-top))`, recovering ~14 px of vertical room for the board.
+
 ## [1.5.2] — 2026-06-14
 
 ### Changed

@@ -1,13 +1,24 @@
+# dependencies + build output
 node_modules/
+dist/
+
+# secrets / private data (PGP keys, server scoreboards, env files)
 server-node/data/
 server-node/keys/
 server-php/private/
 server-php/scores/
 *.asc.bak
-*.log
 .env
 .env.*
+
+# release notes are throwaway — they're consumed once by `gh release create`,
+# then the canonical record lives in CHANGELOG.md and the GitHub Releases page.
+.release-notes-*.md
+
+# tool / OS noise
+*.log
 .DS_Store
-dist/
 .vercel/
 .fly/
+.idea/
+.vscode/

@@ -235,16 +235,21 @@ body.vpad-on .vpad { display: grid; }
  *     (so users can DISCOVER the gestures), reveals at full opacity when
  *     touched on a non-swipe area. Tap a button to act, tap outside to dismiss. */
 @media (max-width: 760px) {
-  /* v1.5.2 — lock the document so iOS Safari can't rubber-band scroll the
+  /* v1.5.3 — lock the document so iOS Safari can't rubber-band scroll the
    * whole page during a soft-drop drag. `position: fixed` on body removes
    * the document from the scroll container entirely — stronger than just
-   * `overflow: hidden`, which iOS sometimes still scrolls past. */
+   * `overflow: hidden`, which iOS sometimes still scrolls past.
+   *
+   * Using `100dvh` (not `100%`) so the body matches the *visual* viewport,
+   * not the layout viewport. Without this iOS anchors `position: fixed`
+   * children (vpad, mobile-bar) to a body that's taller than the painted
+   * area, which pushed the vpad ~200px above the screen edge. */
   html, body {
     overflow: hidden;
     overscroll-behavior: none;
     position: fixed;
     width: 100%;
-    height: 100%;
+    height: 100dvh;
     touch-action: none;
   }
 
@@ -315,10 +320,13 @@ body.vpad-on .vpad { display: grid; }
   }
 
   /* MOBILE BAR — single floating horizontal strip with HOLD · stats · NEXT + actions.
-   * Positioned just below the safe-area top, overlaid on the board. */
+   * Positioned just below the safe-area top, overlaid on the board.
+   *
+   * v1.5.3 — tucked tighter to the status bar (no extra +6 padding) so the
+   * top of the board gains ~14 px of vertical room. */
   .mobile-bar {
     position: fixed;
-    top: max(8px, calc(env(safe-area-inset-top) + 6px));
+    top: max(4px, env(safe-area-inset-top));
     left: 8px; right: 8px;
     z-index: 30;
     display: flex;
@@ -392,18 +400,16 @@ body.vpad-on .vpad { display: grid; }
   /* VPAD — floating, very-low-opacity hint by default; full-opacity when
    * "revealed" via an ambiguous touch.
    *
-   * v1.5.2 — anchored to the true bottom edge of the viewport with negative
-   * insets so it sits as far down as iOS will let us paint, and the default
-   * opacity is dropped to 0.08 so it reads as a near-invisible hint instead
-   * of a visible control surface. The pad now uses `left: 50%; transform`
-   * centering with a fixed width so it doesn't span the whole row and
-   * compete with the board visually — only the user's thumb-reach area
-   * shows buttons. */
+   * v1.5.3 — anchored to true visual-viewport bottom. With `html { height:
+   * 100dvh }` set above, `bottom: 0` on a position-fixed element now hits
+   * the real bottom of the painted area on iOS Safari instead of the
+   * larger layout viewport. We sit the pad just above the home-indicator
+   * safe-area, with a tiny 2 px breathing gap. */
   .vpad {
     position: fixed;
     left: 50%;
     transform: translateX(-50%);
-    bottom: calc(env(safe-area-inset-bottom) + 4px);
+    bottom: calc(env(safe-area-inset-bottom) + 2px);
     z-index: 25;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
