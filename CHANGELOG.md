@@ -7,7 +7,6 @@ All notable changes to **tetris** will be documented here. Format inspired by [K
 ### Added
 - **PHP scoreboard backend** in [`server-php/`](server-php/). A single-file API (`api/index.php`) that runs on any shared PHP host (PHP 7.4+) using either the `gnupg` extension or the `gpg` binary. Private key lives **above** the webroot. This is the backend running in production on [tetris.rocks](https://tetris.rocks/).
 - **Same-origin `/api` auto-detection** in the frontend: when the game is served over HTTPS, the scoreboard client now defaults to the same origin, so deploying to a domain with the PHP backend co-located just works — no settings needed.
-- **Permanent mirror** at [tetris-rocks.pplx.app](https://tetris-rocks.pplx.app/) (offline-only build, no scoreboard server).
 - Production deployment + docs for **Siteground / shared FTP** hosts.
 
 ### Changed

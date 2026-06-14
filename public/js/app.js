@@ -1,5 +1,18 @@
 // tetris — app.js
-// Entry point. Wires engine, renderer, input, background and overlays.
+// ============================================================================
+// THE GLUE.
+//
+// This is where everything is wired together. It owns:
+//   - the boot sequence (apply settings, create modules, show title screen)
+//   - the requestAnimationFrame loop (calls engine.tick + renderer.draw)
+//   - the overlay state machine (title / playing / paused / game-over)
+//   - the settings dialog (theme/mode/zoom/sfx/server URL)
+//   - the game-over receipt flow (submit to server OR download local file)
+//   - service-worker registration
+//
+// app.js is intentionally the "messy" file: it knows about every other
+// module. That's fine — the other modules know about nothing.
+// ============================================================================
 
 import { Engine } from './engine.js';
 import { Renderer } from './renderer.js';
@@ -9,11 +22,22 @@ import { Sound } from './sound.js';
 import { settings } from './storage.js';
 import { Scoreboard } from './scoreboard.js';
 
-const CLIENT_VERSION = '1.0.0';
+// Bump this string on every release; it ends up inside every signed receipt
+// so users can prove which client version played the game. Pair it with the
+// version string in index.html for consistency.
+const CLIENT_VERSION = '1.1.1';
 
+// Convenience: jQuery's $ but it's just querySelector.
 const $ = (q) => document.querySelector(q);
 
-// ---------- Apply settings to DOM ---------- //
+// ---------------------------------------------------------------------------
+// Apply settings → DOM
+// ---------------------------------------------------------------------------
+// Persisted preferences live in localStorage (via storage.js). They control:
+//   - <html data-theme=…> and <html data-mode=…> (CSS themes pick this up)
+//   - --zoom CSS variable on #game-wrap (zoom in/out)
+//   - body.vpad-on class (show on-screen D-pad)
+//   - "fit to screen" auto-zoom on small viewports
 function applySettings() {
   const s = settings.state;
   document.documentElement.dataset.theme = s.theme;
@@ -21,7 +45,8 @@ function applySettings() {
   const zoom = (s.zoom || 100) / 100;
   document.getElementById('game-wrap').style.setProperty('--zoom', zoom);
 
-  // Virtual pad visibility
+  // Virtual pad visibility: 'always', 'never', or 'auto' = show on coarse pointer
+  // (i.e., touch devices). matchMedia('(pointer: coarse)') is the canonical check.
   const wantsVPad = s.vpadMode === 'always'
     || (s.vpadMode === 'auto' && matchMedia('(pointer: coarse)').matches);
   document.body.classList.toggle('vpad-on', wantsVPad);
@@ -29,23 +54,30 @@ function applySettings() {
   if (s.fit) fitToScreen();
 }
 
+// Measure the game wrapper against its parent and pick a uniform scale that
+// makes it fit. We have to do the measurement on the next frame because
+// changing --zoom and reading dimensions in the same frame returns stale values.
 function fitToScreen() {
   const wrap = document.getElementById('game-wrap');
   wrap.style.setProperty('--zoom', 1);
-  // Defer a frame so layout settles, then measure
   requestAnimationFrame(() => {
     const wrapRect = wrap.getBoundingClientRect();
     const stage = wrap.parentElement.getBoundingClientRect();
-    const padded = stage.height - 40;
+    const padded = stage.height - 40;                         // 40 px headroom
     const scale = Math.min(1.6, Math.max(0.5, padded / wrapRect.height));
     wrap.style.setProperty('--zoom', scale);
     settings.set('zoom', Math.round(scale * 100));
   });
 }
 
-// ---------- Boot ---------- //
+// ---------------------------------------------------------------------------
+// Boot
+// ---------------------------------------------------------------------------
 applySettings();
 
+// One Engine, one Sound, one Renderer, one Background, one Scoreboard. These
+// live for the entire page lifetime — switching themes / modes / restarting
+// the game does NOT re-create them.
 const engine = new Engine();
 const sound = new Sound();
 const renderer = new Renderer({
@@ -56,10 +88,16 @@ const renderer = new Renderer({
 const bg = new Background($('#bg-canvas'));
 const scoreboard = new Scoreboard();
 
-// Stats counter for receipt
+// Game-session stats — fed into the PGP-signed receipt at game over.
+// `pieces` starts at 1 because the first piece is spawned by the engine
+// before the player makes any move (so it never gets counted via trackPiece).
 const stats = { pieces: 0, holds: 0, hardDrops: 0, softDrops: 0, rotates: 0, maxCombo: 0, tetrises: 0 };
 let started = false;
 let lastTickActedOnPiece = engine.current;
+
+// Called every frame from the game loop. Detects when the current piece
+// reference changes (a new piece spawned) and increments the piece counter.
+// Also tracks max combo and total Tetrises for the receipt.
 const trackPiece = () => {
   if (engine.current !== lastTickActedOnPiece) {
     lastTickActedOnPiece = engine.current;
@@ -69,14 +107,20 @@ const trackPiece = () => {
   if (engine.lastClear?.n === 4) stats.tetrises++;
 };
 
-// ---------- Overlay ---------- //
+// ---------------------------------------------------------------------------
+// Overlay state machine
+// ---------------------------------------------------------------------------
+// One <div id="overlay"> hosts three screens: title, paused, game-over. We
+// just swap innerHTML and re-bind buttons. Tiny, no framework, no router.
 const overlayEl = $('#overlay');
 const overlayCard = $('#overlay-card');
+
 function showOverlay(html) {
   overlayCard.innerHTML = html;
   overlayEl.hidden = false;
 }
 function hideOverlay() { overlayEl.hidden = true; }
+
 function titleScreen() {
   showOverlay(`
     <h1>tetris</h1>
@@ -112,12 +156,19 @@ function startGame() {
   lastTickActedOnPiece = engine.current;
   started = true;
   hideOverlay();
+  // Audio contexts on iOS/Safari only unlock after a user gesture — this
+  // click is that gesture, so we call sound.ensure() here, not on boot.
   sound.ensure();
 }
 
 titleScreen();
 
-// ---------- Action handler ---------- //
+// ---------------------------------------------------------------------------
+// Action handler — the Input module emits these strings.
+// ---------------------------------------------------------------------------
+// If a game hasn't started (title or game-over), only 'drop' (Space) and
+// 'rotate' (Up/X/tap) act as "press any key to start". Other actions are
+// ignored. Once a game is running, we route into the engine and play SFX.
 function action(a) {
   if (!started || engine.gameOver) {
     if (a === 'drop' || a === 'rotate') startGame();
@@ -131,12 +182,12 @@ function action(a) {
     case 'rotate':     if (engine.rotate(1)) { sound.rotate(); stats.rotates++; } break;
     case 'rotateCCW':  if (engine.rotate(-1)) { sound.rotate(); stats.rotates++; } break;
     case 'hold':       if (engine.holdPiece()) { sound.hold(); stats.holds++; } break;
-    case 'drop':       {
+    case 'drop': {
       const cells = engine.hardDrop();
       if (cells > 0) { sound.drop(); stats.hardDrops++; }
       break;
     }
-    case 'pause':      engine.togglePause(); if (engine.paused) pausedScreen(); else hideOverlay(); break;
+    case 'pause': engine.togglePause(); if (engine.paused) pausedScreen(); else hideOverlay(); break;
   }
 }
 
@@ -146,10 +197,12 @@ const input = new Input({
   onAction: action,
 });
 
-// ---------- Settings dialog ---------- //
+// ---------------------------------------------------------------------------
+// Settings dialog — <dialog> element + a normal <form>, no React.
+// ---------------------------------------------------------------------------
 const settingsDialog = $('#settings-dialog');
 $('#btn-settings').addEventListener('click', () => {
-  // Sync form to current settings
+  // Sync form values to current settings (so the dialog reflects the truth).
   const f = settingsDialog.querySelector('form');
   f.querySelectorAll('input[name=theme]').forEach(i => i.checked = i.value === settings.get('theme'));
   f.querySelectorAll('input[name=mode]').forEach(i => i.checked = i.value === settings.get('mode'));
@@ -162,9 +215,12 @@ $('#btn-settings').addEventListener('click', () => {
   f.querySelector('input[name=server]').value = settings.get('server') || '';
   settingsDialog.showModal();
 });
+// Live-update the zoom output label as the range slider moves.
 settingsDialog.querySelector('input[name=zoom]').addEventListener('input', (e) => {
   settingsDialog.querySelector('output[name=zoom-out]').value = e.target.value + '%';
 });
+// On close, if the user clicked "Save", harvest form values and persist.
+// <dialog>'s returnValue is set by the <button value="save"> that closed it.
 settingsDialog.addEventListener('close', () => {
   if (settingsDialog.returnValue !== 'save') return;
   const f = settingsDialog.querySelector('form');
@@ -184,6 +240,7 @@ settingsDialog.addEventListener('close', () => {
   applySettings();
 });
 
+// Quick-access buttons in the header bar (skip the dialog).
 $('#btn-mode').addEventListener('click', () => {
   settings.set('mode', settings.get('mode') === 'dark' ? 'light' : 'dark');
   applySettings();
@@ -192,15 +249,18 @@ $('#btn-zoom-in').addEventListener('click', () => { settings.set('zoom', Math.mi
 $('#btn-zoom-out').addEventListener('click', () => { settings.set('zoom', Math.max(60, settings.get('zoom') - 10)); applySettings(); });
 $('#btn-zoom-reset').addEventListener('click', () => { settings.set('fit', true); fitToScreen(); });
 
-// Sync sound prefs
+// Sync sound + scoreboard with persisted settings at boot.
 sound.enabled = settings.get('sfx');
 scoreboard.setServer(settings.get('server'));
 
-// ---------- Game-over dialog ---------- //
+// ---------------------------------------------------------------------------
+// Game-over dialog — collect identity, submit to server (or download local).
+// ---------------------------------------------------------------------------
 const goDialog = $('#gameover-dialog');
 const goForm = $('#gameover-form');
 
 function openGameOver() {
+  // Prefill from last-known identity (saved on previous submit).
   const id = settings.get('identity') || {};
   goForm.elements.name.value = id.name || '';
   goForm.elements.tagline.value = id.tagline || '';
@@ -209,12 +269,17 @@ function openGameOver() {
   $('#go-lines').textContent = engine.lines;
   $('#go-level').textContent = engine.level;
   $('#go-time').textContent = formatTime(engine.elapsedMs());
+  // Tell the user whether they're getting a signed or unsigned receipt.
   $('#go-status').textContent = scoreboard.serverAvailable()
     ? `Server: ${settings.get('server')} — your score will be signed.`
     : 'No server set — you can still download an unsigned local receipt.';
   goDialog.showModal();
 }
 
+// Submit handler — receives one of three intents from the form buttons:
+//   submit  = sign + persist to server's public scoreboard
+//   sign    = sign only (no public listing) and download
+//   cancel  = close without action
 goForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const intent = e.submitter?.value || 'cancel';
@@ -241,7 +306,7 @@ goForm.addEventListener('submit', async (e) => {
     played_at: new Date().toISOString(),
   };
 
-  // Remember identity
+  // Remember identity for next time so the player doesn't retype their name.
   settings.patch({ identity: { name: payload.name, tagline: payload.tagline, email: payload.email } });
 
   $('#go-status').textContent = 'Working…';
@@ -257,6 +322,8 @@ goForm.addEventListener('submit', async (e) => {
     }
     setTimeout(() => goDialog.close('done'), 1200);
   } catch (err) {
+    // Network failure — gracefully degrade to an unsigned local receipt so the
+    // player still gets something to show for their game.
     $('#go-status').textContent = 'Server unreachable — saved locally instead.';
     scoreboard.saveLocal(payload);
     downloadText(`tetris-${payload.name || 'anon'}-${payload.score}.txt`, localReceiptInline(payload));
@@ -280,27 +347,37 @@ Client:  tetris ${p.client_version}
 `;
 }
 
+// Standard "download a string as a file" recipe: Blob → object URL → <a download>.
 function downloadText(filename, text) {
   const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = filename;
   document.body.appendChild(a); a.click(); a.remove();
+  // Free the blob URL after a short delay (the browser needs a moment to start the download).
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
+// "153000 ms" → "2:33"
 function formatTime(ms) {
   const s = Math.floor((ms || 0) / 1000);
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
-// ---------- Game loop ---------- //
+// ---------------------------------------------------------------------------
+// Game loop
+// ---------------------------------------------------------------------------
+// Standard rAF loop. We compute `dt` (ms since last frame) and clamp it at
+// 100 ms to prevent huge time jumps when the tab is backgrounded — without
+// the clamp, returning to the tab after 30 seconds would drop the piece all
+// the way to the floor in one tick.
 let last = performance.now();
 function loop(now) {
   const dt = Math.min(100, now - last);
   last = now;
   if (started) {
     engine.tick(dt);
+    // Game-over detection — fire once when the engine flips the flag.
     if (engine.gameOver && !overlayEl.dataset.over) {
       overlayEl.dataset.over = '1';
       sound.over();
@@ -308,11 +385,12 @@ function loop(now) {
     } else if (!engine.gameOver) {
       delete overlayEl.dataset.over;
     }
+    // Play a line-clear SFX once per clear, then consume the flag.
     if (engine.lastClear) { sound.clear(engine.lastClear.n); engine.lastClear = null; }
   }
   trackPiece();
   renderer.draw(engine);
-  // Update HUD
+  // HUD updates — cheap to do every frame because innerText only writes when changed.
   $('#stat-score').textContent = engine.score.toLocaleString();
   $('#stat-lines').textContent = engine.lines;
   $('#stat-level').textContent = engine.level;
@@ -321,7 +399,13 @@ function loop(now) {
 }
 requestAnimationFrame(loop);
 
-// ---------- Service worker (offline) ---------- //
+// ---------------------------------------------------------------------------
+// Service worker — offline support
+// ---------------------------------------------------------------------------
+// sw.js precaches the game shell. On first load (online), the SW installs
+// and stocks the cache. On subsequent loads, the page works without network.
+// We register on window 'load' (not DOMContentLoaded) so it doesn't compete
+// with the initial render for resources.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js').catch(() => {});

@@ -1,12 +1,37 @@
 // tetris — scoreboard.js
-// Talks to the backend over same-origin /api by default, or a configured remote URL.
-// Falls back to localStorage when offline / no server.
+// ============================================================================
+// The NETWORK BOUNDARY of the game.
+//
+// All HTTP I/O lives in this file. The rest of the code calls scoreboard.submit
+// or .fetchTop without knowing whether there's actually a server on the other
+// side. We handle three cases transparently:
+//
+//   1. SERVER AVAILABLE — POST the score to /api/submit or /api/sign. The
+//      server signs the receipt with PGP and (optionally) stores it on the
+//      public leaderboard. Returns the ASCII-armoured signed text.
+//
+//   2. NO SERVER — generate an unsigned local receipt so the player still
+//      gets a downloadable .txt to keep. Marked clearly as UNSIGNED.
+//
+//   3. NETWORK ERROR — same fallback as (2), with a "saved locally" message.
+//      The caller (app.js) catches the rejected promise and writes the local
+//      file. We also persist the score to localStorage in all cases so the
+//      player can see their own history offline.
+//
+// Server URL resolution (in order):
+//   a. Manual override in settings ("server" field) — saved to localStorage.
+//   b. Same-origin /api — auto-detected when the page is on http(s).
+//   c. None — offline mode.
+// ============================================================================
 
 const LOCAL_KEY = 'tetris:scores';
 
 // Same-origin /api works when:
-//   - the page is served over http(s) (not file://)
-//   - a backend (PHP at tetris.rocks, or Node) lives at /api on the same origin
+//   - the page is served over http(s) (not file://, which has no origin)
+//   - a backend (PHP at tetris.rocks, or Node on Fly) lives at /api on the
+//     same origin
+// We just check the protocol — testing actual reachability happens at submit
+// time. If /api 404s, the fetch throws and we fall back to local.
 function sameOriginApiAvailable() {
   try {
     return typeof window !== 'undefined'
@@ -19,10 +44,12 @@ export class Scoreboard {
     this.override = (localStorage.getItem('tetris:server') || '').replace(/\/$/, '');
     this.server = this.resolve();
   }
+  // Resolve the server URL: explicit override beats auto-detection.
   resolve() {
     if (this.override) return this.override;
     return sameOriginApiAvailable() ? '/api' : '';
   }
+  // Called when the user changes the URL in settings.
   setServer(url) {
     const v = (url || '').replace(/\/$/, '');
     this.override = v;
@@ -32,6 +59,9 @@ export class Scoreboard {
   }
   serverAvailable() { return !!this.server; }
 
+  // ------- Local high-score history -------
+  // Capped at 200 entries so localStorage doesn't grow unbounded after years
+  // of play. Sorted descending by score so .slice(0, n) returns the top N.
   localScores() {
     try { return JSON.parse(localStorage.getItem(LOCAL_KEY) || '[]'); }
     catch { return []; }
@@ -43,10 +73,16 @@ export class Scoreboard {
     localStorage.setItem(LOCAL_KEY, JSON.stringify(list.slice(0, 200)));
   }
 
-  // Ask server to sign + (optionally) store. Returns { signed_txt, accepted, rank }.
+  // ------- Submit -------
+  // `store: true`  → POST /submit (signed AND added to public leaderboard)
+  // `store: false` → POST /sign   (signed, NOT stored — private receipt only)
+  //
+  // Returns { signed_txt, accepted, rank, offline? }. Throws on network/HTTP
+  // errors so the caller can show a graceful fallback message.
   async submit(payload, { store = true } = {}) {
     if (!this.server) {
-      // Offline: store locally and craft an unsigned receipt so the player still gets something.
+      // Offline: store locally and craft an unsigned receipt so the player
+      // still gets something tangible. Never throws.
       this.saveLocal(payload);
       return { signed_txt: localReceipt(payload), accepted: false, rank: null, offline: true };
     }
@@ -58,10 +94,14 @@ export class Scoreboard {
     });
     if (!res.ok) throw new Error(`server: ${res.status}`);
     const data = await res.json();
+    // Server kept the score → also keep a local copy for offline browsing.
     if (data.accepted) this.saveLocal(payload);
     return data;
   }
 
+  // ------- Top N -------
+  // Returns either remote data or local data depending on availability.
+  // Discriminated by the `online` flag so the UI can render appropriately.
   async fetchTop(n = 25) {
     if (!this.server) return { local: this.localScores().slice(0, n), online: false };
     try {
@@ -75,6 +115,9 @@ export class Scoreboard {
   }
 }
 
+// Plain-text fallback receipt for when there's no server. Clearly labelled
+// UNSIGNED so the player knows it can't be verified. Same field order as the
+// PGP-signed version so the visual layout is consistent.
 function localReceipt(p) {
   const lines = [
     '----- TETRIS SCORE (OFFLINE — UNSIGNED) -----',
