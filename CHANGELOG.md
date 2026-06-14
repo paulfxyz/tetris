@@ -2,6 +2,15 @@
 
 All notable changes to **tetris** will be documented here. Format inspired by [Keep a Changelog](https://keepachangelog.com/), versioning follows [SemVer](https://semver.org/).
 
+## [1.4.2] — 2026-06-14
+
+### Added
+- **HOLD ghost preview.** When the HOLD slot is empty, the panel now shows a low-opacity (18%) ghost of the CURRENT piece instead of empty space. Hints at what hitting C will store and gives the HUD a calmer, more intentional look on desktop. The on-board ghost system was already there — this just reuses `drawCell({ ghost: true })` inside the HOLD mini-canvas, no new rendering code.
+
+### Changed
+- Service worker cache bumped to `tetris-v1.4.2`.
+- README badge → 1.4.2.
+
 ## [1.4.1] — 2026-06-14
 
 ### Fixed

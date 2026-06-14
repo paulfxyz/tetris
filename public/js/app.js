@@ -25,7 +25,7 @@ import { Scoreboard } from './scoreboard.js';
 // Bump this string on every release; it ends up inside every signed receipt
 // so users can prove which client version played the game. Pair it with the
 // version string in index.html for consistency.
-const CLIENT_VERSION = '1.4.1';
+const CLIENT_VERSION = '1.4.2';
 
 // Convenience: jQuery's $ but it's just querySelector.
 const $ = (q) => document.querySelector(q);

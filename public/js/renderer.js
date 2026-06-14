@@ -278,7 +278,7 @@ export class Renderer {
   //   - reset transform to identity
   //   - clearRect using canvas.width / canvas.height (BITMAP coords)
   //   - restore() to bring back the DPR transform for subsequent draws
-  drawMini(ctx, canvas, types) {
+  drawMini(ctx, canvas, types, { ghost = false } = {}) {
     const rect = canvas.getBoundingClientRect();
     const W = rect.width;
     const H = rect.height;
@@ -289,6 +289,11 @@ export class Renderer {
     const filtered = (types || []).filter(Boolean);
     if (filtered.length === 0) return;
     const style = this.style;
+    // Ghost preview: drawCell already draws the cell at 18% alpha when
+    // opts.ghost is true (no outline, no sheen — same look as the on-board
+    // landing preview). For the HOLD chip we want it just a touch more
+    // present than the on-board ghost, so we DON'T multiply alpha further
+    // here — 18% reads well against the chip's slightly translucent surface.
     const slotH = H / filtered.length;
     filtered.forEach((t, i) => {
       const m = PIECES[t].matrix;
@@ -306,7 +311,7 @@ export class Renderer {
       for (let y = 0; y < trimmed.length; y++) {
         for (let x = 0; x < trimmed[y].length; x++) {
           if (!trimmed[y][x]) continue;
-          drawCell(ctx, ox + x * cell, oy + y * cell, cell, pieceColor(t), style);
+          drawCell(ctx, ox + x * cell, oy + y * cell, cell, pieceColor(t), style, { ghost });
         }
       }
     });
@@ -315,7 +320,15 @@ export class Renderer {
   drawHold(engine) {
     // `engine.hold` is a single type letter or null. The renderer accepts an
     // array, so wrap into an array if held, or pass empty array if not.
-    this.drawMini(this.holdCtx, this.holdCanvas, engine.hold ? [engine.hold] : []);
+    // When the slot is empty, show a low-opacity ghost of the CURRENT piece
+    // so the panel never looks empty — it hints at what hitting C will store.
+    if (engine.hold) {
+      this.drawMini(this.holdCtx, this.holdCanvas, [engine.hold]);
+    } else if (engine.current?.type) {
+      this.drawMini(this.holdCtx, this.holdCanvas, [engine.current.type], { ghost: true });
+    } else {
+      this.drawMini(this.holdCtx, this.holdCanvas, []);
+    }
   }
 
   drawNext(engine) {
