@@ -255,6 +255,12 @@ export class Input {
       st = performance.now();
       moved = false;
       consumed = false;
+      // v1.5.4 — reveal the floating vpad on EVERY touchstart, not just
+      // ambiguous touches. The pad sits at very low opacity by default;
+      // the moment the user touches the board we lift it to full opacity
+      // so the buttons are visible while they play. The 3 s auto-hide
+      // timer is reset on every touch / vpad button press.
+      revealVPad();
       // Arm long-press — fires HOLD if finger still down + still after 500 ms.
       clearTimeout(longPressTimer);
       longPressTimer = setTimeout(() => {

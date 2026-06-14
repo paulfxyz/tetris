@@ -295,6 +295,15 @@ body.vpad-on .vpad { display: grid; }
    * board ourselves. Without this, swiping down still triggered Safari's
    * page-scroll / pull-to-refresh on top of our soft-drop handler, which
    * felt like the play area was sliding under the finger. */
+  /* v1.5.4 — canvas pinned to the BOTTOM of the frame (was: centered).
+   * The canvas snaps to an integer cell size, so there's almost always a
+   * few px of slack between `--board-h` and the height budget. Centering
+   * split that slack equally above & below, which left ~80–170 px of empty
+   * black space *under* the bottom playfield row — right where the user
+   * expected the vpad to live. Anchoring the canvas to the bottom shoves
+   * all of the slack up under the floating mobile-bar instead. Net effect:
+   * bottom playfield row hugs the home-indicator area, and the vpad
+   * overlays the lowest few rows of the board (classic touch tetris). */
   .board-frame {
     grid-row: 1; grid-column: 1;
     padding: 0;
@@ -307,7 +316,7 @@ body.vpad-on .vpad { display: grid; }
     background: var(--color-board-bg);
     box-shadow: none;
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: center;
     overflow: hidden;
     touch-action: none;
@@ -398,25 +407,29 @@ body.vpad-on .vpad { display: grid; }
   }
 
   /* VPAD — floating, very-low-opacity hint by default; full-opacity when
-   * "revealed" via an ambiguous touch.
+   * the user touches the board (revealed for ~3 s, see input.js).
    *
-   * v1.5.3 — anchored to true visual-viewport bottom. With `html { height:
-   * 100dvh }` set above, `bottom: 0` on a position-fixed element now hits
-   * the real bottom of the painted area on iOS Safari instead of the
-   * larger layout viewport. We sit the pad just above the home-indicator
-   * safe-area, with a tiny 2 px breathing gap. */
+   * v1.5.4 — anchored explicitly at the BOTTOM of `100dvh` via `top` instead
+   * of `bottom`. iOS Safari's `position: fixed; bottom: 0` is unreliable when
+   * the document is locked with `position: fixed` (anchors to the layout
+   * viewport, not the visual one), so we compute the top edge from the
+   * dynamic-viewport height directly. The vpad ends at exactly
+   * `100dvh - safe-area-inset-bottom`, no off-by-200-px iOS surprise. */
   .vpad {
     position: fixed;
     left: 50%;
     transform: translateX(-50%);
-    bottom: calc(env(safe-area-inset-bottom) + 2px);
+    top: calc(100dvh - var(--vpad-h, 110px) - env(safe-area-inset-bottom) - 4px);
     z-index: 25;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     grid-template-rows: 1fr 1fr;
     gap: 5px;
     width: min(360px, calc(100vw - 16px));
-    opacity: 0.08;
+    /* v1.5.4 — default opacity bumped slightly (0.08 → 0.15) so the pad is
+     * actually visible as a hint when the game starts; touchstart still
+     * reveals to full opacity (.96) for 3 s. */
+    opacity: 0.15;
     transition: opacity .25s ease;
     pointer-events: none;
   }

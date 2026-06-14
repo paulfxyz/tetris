@@ -2,6 +2,16 @@
 
 All notable changes to **tetris** will be documented here. Format inspired by [Keep a Changelog](https://keepachangelog.com/), versioning follows [SemVer](https://semver.org/).
 
+## [1.5.4] — 2026-06-14
+
+### Fixed
+- **Playfield now hugs the bottom of the screen on mobile.** `.board-frame` switched from `align-items: center` to `align-items: flex-end`. The canvas snaps to an integer cell size, so there's always a few px of slack between `--board-h` and the height budget — centering split that slack equally top & bottom, leaving 80–170 px of empty black under the bottom playfield row. Pinning to flex-end pushes all the slack up under the floating mobile-bar instead; the bottom row of the board now sits right above the home-indicator.
+- **Vpad reveals on every touch, not just on "ambiguous" gestures.** The v1.5.0 reveal logic only fired when a touch matched no other gesture — in practice it almost never triggered, because every touch either tapped, dragged, swiped, or long-pressed. Now `touchstart` always lifts the pad to full opacity for 3 s, so the buttons are visible the moment the user touches the board.
+- **Vpad bottom anchor uses `top: calc(100dvh - ...)` instead of `bottom`.** With the document locked via `position: fixed` for scroll-prevention, iOS Safari anchors `position: fixed; bottom: 0` to the layout viewport (the larger one that ignores collapsing chrome), not the visual one. Computing the top edge from `100dvh` directly sidesteps the layout-vs-visual viewport drama — the pad lands at the real bottom edge of the painted area on every device.
+
+### Changed
+- **Default vpad opacity 0.08 → 0.15** so the pad is visible as a hint at game start (still subtle enough not to compete with the board).
+
 ## [1.5.3] — 2026-06-14
 
 ### Fixed
