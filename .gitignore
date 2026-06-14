@@ -1,0 +1,11 @@
+node_modules/
+server/data/
+server/keys/
+*.asc.bak
+*.log
+.env
+.env.*
+.DS_Store
+dist/
+.vercel/
+.fly/

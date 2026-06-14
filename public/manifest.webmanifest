@@ -1,0 +1,13 @@
+{
+  "name": "tetris",
+  "short_name": "tetris",
+  "description": "Drop, line, repeat. Offline-capable Tetris with PGP-signed scoreboard.",
+  "start_url": ".",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0a0a0f",
+  "theme_color": "#0a0a0f",
+  "icons": [
+    { "src": "assets/favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

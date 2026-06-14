@@ -1,0 +1,154 @@
+/* tetris — game.css
+ * Layout of HUDs, board, virtual pad and overlay. */
+
+.game-wrap {
+  display: grid;
+  grid-template-columns: minmax(110px, 140px) auto minmax(110px, 140px);
+  gap: 18px;
+  align-items: stretch;
+  transform: scale(var(--zoom, 1));
+  transform-origin: top center;
+  transition: transform .25s ease;
+}
+
+.hud { display: flex; flex-direction: column; gap: 14px; }
+.hud-block {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 12px;
+  backdrop-filter: blur(8px);
+}
+.hud-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+}
+.hud-block canvas {
+  display: block; width: 100%; height: auto;
+  image-rendering: pixelated;
+}
+.stats { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; }
+.stats dt { color: var(--color-text-muted); font-size: 12px; }
+.stats dd {
+  margin: 0;
+  font-family: var(--font-game);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-size: 15px; font-weight: 600;
+  text-align: right;
+}
+.keys { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; font-size: 12px; color: var(--color-text-muted); }
+.keys kbd { margin-right: 2px; }
+
+/* Board */
+.board-frame {
+  position: relative;
+  background: var(--color-board-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 8px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 30px rgba(0,0,0,.25);
+}
+html[data-theme="classic"] .board-frame { box-shadow: 0 0 0 1px var(--color-border); }
+html[data-theme="color"] .board-frame { box-shadow: inset 0 0 0 2px var(--color-border); border-radius: 4px; }
+html[data-theme="color"] .hud-block { border-radius: 4px; box-shadow: inset 0 0 0 2px var(--color-border); }
+
+#game-canvas {
+  display: block;
+  width: 300px;
+  height: 600px;
+  max-height: calc(100dvh - 220px);
+  aspect-ratio: 1 / 2;
+  image-rendering: pixelated;
+}
+
+/* Overlay (title / pause / game over) */
+.overlay {
+  position: absolute; inset: 8px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-board-bg) 85%, transparent);
+  backdrop-filter: blur(6px);
+  text-align: center;
+  padding: 20px;
+  transition: opacity .2s;
+}
+.overlay[hidden] { display: none; }
+.overlay-card { display: grid; gap: 12px; max-width: 220px; }
+.overlay-card h1 {
+  font-family: var(--font-game);
+  font-size: 22px; margin: 0;
+  letter-spacing: .04em;
+}
+.overlay-card p { margin: 0; color: var(--color-text-muted); font-size: 13px; }
+.overlay-card .cta {
+  background: var(--color-accent); color: var(--color-on-accent);
+  border: none; padding: 10px 16px; border-radius: 8px;
+  font: inherit; font-weight: 600; cursor: pointer;
+  font-family: var(--font-game);
+  letter-spacing: .04em;
+}
+.overlay-card .cta:active { transform: scale(.97); }
+.overlay-card small { color: var(--color-text-muted); font-size: 11px; }
+
+/* Virtual pad */
+.vpad {
+  display: none;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  width: min(360px, 100%);
+}
+body.vpad-on .vpad { display: grid; }
+.vbtn {
+  height: 56px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  border-radius: 10px;
+  font-size: 22px;
+  font-family: inherit;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  transition: background .12s, transform .08s;
+}
+.vbtn:active { background: var(--color-surface-hover); transform: scale(.96); }
+.vbtn-drop { background: color-mix(in srgb, var(--color-accent) 18%, var(--color-surface)); }
+
+/* Mobile layout — stack HUDs above/below the board */
+@media (max-width: 760px) {
+  .game-wrap {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .hud { flex-direction: row; flex-wrap: wrap; gap: 10px; }
+  .hud-block { flex: 1; min-width: 0; padding: 8px 10px; }
+  .hud-block canvas { max-width: 80px; }
+  .hud-keys { display: none; }
+  #game-canvas {
+    width: min(80vw, 320px);
+    height: auto;
+    max-height: 60dvh;
+  }
+  .stage { gap: 8px; padding: 4px 10px 10px; }
+}
+
+@media (max-height: 720px) {
+  .game-wrap { gap: 10px; }
+}
+
+/* Modern theme bling — animated accent on overlay CTA */
+html[data-theme="modern"] .overlay-card .cta {
+  position: relative; overflow: hidden;
+}
+html[data-theme="modern"] .overlay-card .cta::after {
+  content: ''; position: absolute; inset: -2px;
+  background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,.25), transparent 70%);
+  transform: translateX(-100%);
+  animation: shine 2.6s ease-in-out infinite;
+}
+@keyframes shine { 50%, 100% { transform: translateX(100%); } }

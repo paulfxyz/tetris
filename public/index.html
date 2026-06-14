@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="modern" data-mode="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#0a0a0f" />
+  <title>tetris — drop, line, repeat.</title>
+  <meta name="description" content="A modern, offline-capable Tetris. Keyboard, touch & virtual pad. PGP-signed scoreboard. Open source." />
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Press+Start+2P&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/themes.css" />
+  <link rel="stylesheet" href="css/game.css" />
+</head>
+<body>
+  <!-- Animated tetromino background -->
+  <canvas id="bg-canvas" aria-hidden="true"></canvas>
+
+  <!-- Top bar -->
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="tetris home">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <rect x="2" y="2" width="9" height="9" fill="currentColor"/>
+        <rect x="13" y="2" width="9" height="9" fill="currentColor" opacity=".6"/>
+        <rect x="2" y="13" width="9" height="9" fill="currentColor" opacity=".4"/>
+        <rect x="13" y="13" width="9" height="9" fill="currentColor" opacity=".8"/>
+      </svg>
+      <span>tetris</span>
+      <span class="brand-version">v1.0.0</span>
+    </a>
+    <nav class="topbar-actions">
+      <button class="iconbtn" id="btn-zoom-out" title="Zoom out" aria-label="Zoom out">−</button>
+      <button class="iconbtn" id="btn-zoom-reset" title="Fit to screen" aria-label="Fit">◱</button>
+      <button class="iconbtn" id="btn-zoom-in" title="Zoom in" aria-label="Zoom in">+</button>
+      <span class="sep" aria-hidden="true"></span>
+      <button class="iconbtn" id="btn-mode" title="Light / dark" aria-label="Toggle light / dark">☼</button>
+      <button class="iconbtn" id="btn-settings" title="Settings" aria-label="Settings">⚙</button>
+    </nav>
+  </header>
+
+  <!-- Main game stage -->
+  <main class="stage">
+    <div class="game-wrap" id="game-wrap">
+
+      <!-- Left HUD -->
+      <aside class="hud hud-left">
+        <div class="hud-block">
+          <div class="hud-label">hold</div>
+          <canvas id="hold-canvas" width="96" height="96" aria-label="held piece"></canvas>
+        </div>
+        <div class="hud-block">
+          <div class="hud-label">stats</div>
+          <dl class="stats">
+            <dt>score</dt><dd id="stat-score">0</dd>
+            <dt>lines</dt><dd id="stat-lines">0</dd>
+            <dt>level</dt><dd id="stat-level">1</dd>
+            <dt>time</dt><dd id="stat-time">0:00</dd>
+          </dl>
+        </div>
+      </aside>
+
+      <!-- Board -->
+      <section class="board-frame" aria-label="play field">
+        <canvas id="game-canvas" width="300" height="600"></canvas>
+
+        <!-- Overlay: title / pause / game over -->
+        <div class="overlay" id="overlay">
+          <div class="overlay-card" id="overlay-card">
+            <!-- Filled by JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- Right HUD -->
+      <aside class="hud hud-right">
+        <div class="hud-block">
+          <div class="hud-label">next</div>
+          <canvas id="next-canvas" width="96" height="240" aria-label="next pieces"></canvas>
+        </div>
+        <div class="hud-block hud-keys">
+          <div class="hud-label">keys</div>
+          <ul class="keys">
+            <li><kbd>←</kbd><kbd>→</kbd> move</li>
+            <li><kbd>↓</kbd> soft</li>
+            <li><kbd>↑</kbd> rotate</li>
+            <li><kbd>Space</kbd> drop</li>
+            <li><kbd>C</kbd> hold</li>
+            <li><kbd>P</kbd> pause</li>
+          </ul>
+        </div>
+      </aside>
+    </div>
+
+    <!-- Virtual pad -->
+    <div class="vpad" id="vpad" aria-label="virtual controls">
+      <button class="vbtn" data-action="left" aria-label="move left">◀</button>
+      <button class="vbtn" data-action="rotate" aria-label="rotate">↻</button>
+      <button class="vbtn" data-action="right" aria-label="move right">▶</button>
+      <button class="vbtn" data-action="hold" aria-label="hold">H</button>
+      <button class="vbtn vbtn-down" data-action="soft" aria-label="soft drop">▼</button>
+      <button class="vbtn vbtn-drop" data-action="drop" aria-label="hard drop">⤓</button>
+    </div>
+  </main>
+
+  <!-- Settings dialog -->
+  <dialog id="settings-dialog" class="dialog">
+    <form method="dialog" class="dialog-form">
+      <h2>Settings</h2>
+
+      <fieldset>
+        <legend>Theme</legend>
+        <label><input type="radio" name="theme" value="classic" /> <span>Classic — pure B&amp;W, Game Boy / terminal</span></label>
+        <label><input type="radio" name="theme" value="color" /> <span>Color — Game Boy Color, pixel art</span></label>
+        <label><input type="radio" name="theme" value="modern" /> <span>Modern — glass blocks, animations</span></label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Mode</legend>
+        <label><input type="radio" name="mode" value="dark" /> <span>Dark</span></label>
+        <label><input type="radio" name="mode" value="light" /> <span>Light</span></label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Display</legend>
+        <label class="row"><span>Zoom</span>
+          <input type="range" name="zoom" min="60" max="160" step="5" />
+          <output name="zoom-out">100%</output>
+        </label>
+        <label class="row"><span>Fit to screen</span>
+          <input type="checkbox" name="fit" />
+        </label>
+        <label class="row"><span>Show virtual pad</span>
+          <select name="vpad-mode">
+            <option value="auto">Auto (touch only)</option>
+            <option value="always">Always</option>
+            <option value="never">Never</option>
+          </select>
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Audio</legend>
+        <label class="row"><span>Sound effects</span><input type="checkbox" name="sfx" /></label>
+        <label class="row"><span>Music</span><input type="checkbox" name="music" /></label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Server</legend>
+        <label class="row"><span>Scoreboard server</span>
+          <input type="url" name="server" placeholder="https://tetris.fly.dev" />
+        </label>
+        <p class="hint">Leave blank to play fully offline. The server signs and stores your score.</p>
+      </fieldset>
+
+      <menu>
+        <button value="cancel">Close</button>
+        <button value="save" class="primary">Save</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <!-- Game-over dialog -->
+  <dialog id="gameover-dialog" class="dialog">
+    <form method="dialog" class="dialog-form" id="gameover-form">
+      <h2>Game over</h2>
+      <p class="final">
+        <span><strong id="go-score">0</strong> pts</span>
+        <span><strong id="go-lines">0</strong> lines</span>
+        <span>Lvl <strong id="go-level">1</strong></span>
+        <span><strong id="go-time">0:00</strong></span>
+      </p>
+
+      <label class="row"><span>Name</span><input name="name" maxlength="32" required placeholder="Paul" autocomplete="off" /></label>
+      <label class="row"><span>Tagline</span><input name="tagline" maxlength="64" placeholder="just one more line…" autocomplete="off" /></label>
+      <label class="row"><span>Email</span><input name="email" type="email" maxlength="120" placeholder="you@example.com" autocomplete="off" /></label>
+
+      <p class="hint" id="go-status"></p>
+
+      <menu>
+        <button value="cancel">Skip</button>
+        <button value="download" class="ghost">Download .txt</button>
+        <button value="submit" class="primary">Submit &amp; download</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

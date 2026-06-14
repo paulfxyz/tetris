@@ -1,0 +1,6 @@
+node_modules
+keys
+data
+*.asc
+.env
+.env.*
