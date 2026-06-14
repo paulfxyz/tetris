@@ -240,6 +240,13 @@ export class Input {
     this.revealVPad = revealVPad;
     this.dismissVPad = dismissVPad;
 
+    // v1.5.2 — touch handlers are NON-PASSIVE so we can preventDefault() on
+    // touchmove. iOS Safari otherwise rubber-bands the page when you swipe
+    // down on the board, and the play surface scrolls along with the gesture
+    // instead of moving the piece. preventDefault() on every move while a
+    // single-finger gesture is in flight stops the page from scrolling and
+    // gives us deterministic gesture handling. We deliberately DO NOT block
+    // multi-touch (pinch-zoom remains, e.touches.length > 1 falls through).
     this.boardEl.addEventListener('touchstart', (e) => {
       if (e.touches.length !== 1) return;             // ignore multi-finger
       const t = e.touches[0];
@@ -257,13 +264,19 @@ export class Input {
         }
         longPressTimer = null;
       }, LONG_PRESS_MS);
-    }, { passive: true });
+    }, { passive: false });
 
     // During the drag, emit one step per `THRESH` pixels of movement on each
     // axis. We update lastX/lastY by exactly the consumed delta so partial
     // pixels accumulate (rather than getting dropped on each frame).
+    //
+    // preventDefault() is called UNCONDITIONALLY for single-finger moves so
+    // iOS Safari doesn't scroll the page or trigger pull-to-refresh during a
+    // soft-drop drag. The CSS rule `touch-action: none` on .board-frame is
+    // the belt; this is the suspenders.
     this.boardEl.addEventListener('touchmove', (e) => {
       if (e.touches.length !== 1) return;
+      e.preventDefault();
       const t = e.touches[0];
       // Cancel pending long-press as soon as the finger drifts past TAP_MAX.
       if (longPressTimer) {
@@ -288,7 +301,7 @@ export class Input {
       }
       // Upward movement is intentionally ignored — there's no way to lift a
       // dropping piece in Tetris, so dragging up does nothing.
-    }, { passive: true });
+    }, { passive: false });
 
     this.boardEl.addEventListener('touchend', (e) => {
       clearTimeout(longPressTimer);

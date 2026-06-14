@@ -1,7 +1,7 @@
 // tetris — service worker
 // Cache-first for the small static bundle so the game works offline.
 
-const CACHE = 'tetris-v1.5.1';
+const CACHE = 'tetris-v1.5.2';
 const ASSETS = [
   './',
   'index.html',

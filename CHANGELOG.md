@@ -2,6 +2,14 @@
 
 All notable changes to **tetris** will be documented here. Format inspired by [Keep a Changelog](https://keepachangelog.com/), versioning follows [SemVer](https://semver.org/).
 
+## [1.5.2] — 2026-06-14
+
+### Changed
+- **Vpad sits at the actual viewport bottom and reads as a near-invisible hint.** Default opacity dropped from 0.18 to 0.08 (still a hint, but no longer competing with the board), grid centered with `left: 50%; transform: translateX(-50%)`, width capped at `min(360px, 100vw - 16px)` so it doesn't span the whole row, and button heights tightened to `clamp(38px, 6dvh, 50px)`. The pad now occupies a thumb-reach footprint instead of a full-width strip.
+
+### Fixed
+- **Page no longer rubber-band-scrolls when you swipe down on the board.** Three changes work together: (1) `touch-action: none` on `.board-frame` tells iOS we handle every gesture, (2) the `touchstart`/`touchmove` listeners switched from `{ passive: true }` to `{ passive: false }` so `e.preventDefault()` actually takes effect on each move event, and (3) `html, body` get `position: fixed; overflow: hidden; touch-action: none` on mobile so the document is removed from the scroll container entirely. Pull-to-refresh and the rubber-band overscroll are both gone.
+
 ## [1.5.1] — 2026-06-14
 
 ### Fixed

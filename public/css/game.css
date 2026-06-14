@@ -235,7 +235,18 @@ body.vpad-on .vpad { display: grid; }
  *     (so users can DISCOVER the gestures), reveals at full opacity when
  *     touched on a non-swipe area. Tap a button to act, tap outside to dismiss. */
 @media (max-width: 760px) {
-  body { overflow: hidden; }
+  /* v1.5.2 — lock the document so iOS Safari can't rubber-band scroll the
+   * whole page during a soft-drop drag. `position: fixed` on body removes
+   * the document from the scroll container entirely — stronger than just
+   * `overflow: hidden`, which iOS sometimes still scrolls past. */
+  html, body {
+    overflow: hidden;
+    overscroll-behavior: none;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+  }
 
   /* TOPBAR — collapsed to nothing (its actions moved into .mobile-bar). */
   .topbar {
@@ -274,7 +285,11 @@ body.vpad-on .vpad { display: grid; }
   /* Side HUDs hidden on mobile (content mirrored into .mobile-bar). */
   .hud-left, .hud-right, .hud-keys { display: none; }
 
-  /* BOARD-FRAME — edge-to-edge, no padding, no border, no rounded corners. */
+  /* BOARD-FRAME — edge-to-edge, no padding, no border, no rounded corners.
+   * v1.5.2 — `touch-action: none` tells iOS we handle every gesture on the
+   * board ourselves. Without this, swiping down still triggered Safari's
+   * page-scroll / pull-to-refresh on top of our soft-drop handler, which
+   * felt like the play area was sliding under the finger. */
   .board-frame {
     grid-row: 1; grid-column: 1;
     padding: 0;
@@ -290,6 +305,9 @@ body.vpad-on .vpad { display: grid; }
     align-items: center;
     justify-content: center;
     overflow: hidden;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
   }
   #game-canvas {
     width: var(--board-w);
@@ -372,20 +390,27 @@ body.vpad-on .vpad { display: grid; }
   }
 
   /* VPAD — floating, very-low-opacity hint by default; full-opacity when
-   * "revealed" via an ambiguous touch. */
+   * "revealed" via an ambiguous touch.
+   *
+   * v1.5.2 — anchored to the true bottom edge of the viewport with negative
+   * insets so it sits as far down as iOS will let us paint, and the default
+   * opacity is dropped to 0.08 so it reads as a near-invisible hint instead
+   * of a visible control surface. The pad now uses `left: 50%; transform`
+   * centering with a fixed width so it doesn't span the whole row and
+   * compete with the board visually — only the user's thumb-reach area
+   * shows buttons. */
   .vpad {
     position: fixed;
-    left: 8px; right: 8px;
-    bottom: max(12px, calc(env(safe-area-inset-bottom) + 8px));
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: calc(env(safe-area-inset-bottom) + 4px);
     z-index: 25;
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     grid-template-rows: 1fr 1fr;
-    gap: 6px;
-    width: auto;
-    max-width: 480px;
-    margin: 0 auto;
-    opacity: 0.18;
+    gap: 5px;
+    width: min(360px, calc(100vw - 16px));
+    opacity: 0.08;
     transition: opacity .25s ease;
     pointer-events: none;
   }
@@ -397,9 +422,9 @@ body.vpad-on .vpad { display: grid; }
   body.vpad-on .vpad { display: grid; }
 
   .vbtn {
-    height: clamp(44px, 7.5dvh, 60px);
-    font-size: clamp(18px, 4.5vw, 22px);
-    border-radius: 10px;
+    height: clamp(38px, 6dvh, 50px);
+    font-size: clamp(16px, 4vw, 20px);
+    border-radius: 9px;
     border: 1px solid rgba(255, 255, 255, .14);
     background: rgba(15, 15, 20, .82);
     color: rgba(255, 255, 255, .92);
