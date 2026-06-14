@@ -193,29 +193,190 @@ body.vpad-on .vpad { display: grid; }
 .vbtn:active { background: var(--color-surface-hover); transform: scale(.96); }
 .vbtn-drop { background: color-mix(in srgb, var(--color-accent) 18%, var(--color-surface)); }
 
-/* Mobile layout — stack HUDs above/below the board */
+/* =====================================================================
+ * MOBILE (v1.4.0 redesign) — single-screen, touch-first
+ * =====================================================================
+ * Goals:
+ *   - No scrolling. The whole game must fit between the safe-area-aware
+ *     top and bottom of the viewport, on phones from 320 px wide up.
+ *   - The board is the hero. HOLD / NEXT / SCORE are compact chips above it.
+ *   - The vpad is anchored to the bottom with big touch targets and a clear
+ *     hero "hard drop" button. Thumbs reach everything without stretching.
+ *   - Hidden on mobile: the desktop "keys" cheatsheet, the topbar zoom
+ *     buttons (zoom is for desktop windowing), and the footer (single-screen). */
 @media (max-width: 760px) {
+  body { overflow: hidden; }
+
+  /* Slim topbar — reclaim every pixel for the board. */
+  .topbar {
+    padding: 6px 10px;
+    padding-top: max(6px, env(safe-area-inset-top));
+  }
+  .topbar .brand span { font-size: 13px; }
+  .topbar .brand svg { width: 18px; height: 18px; }
+  .brand-version { font-size: 10px; padding: 1px 5px; }
+  /* Zoom buttons make no sense on a touch device sized to the viewport;
+   * the settings gear and theme toggle do. Keep only those two. */
+  #btn-zoom-in, #btn-zoom-out, #btn-zoom-reset,
+  .topbar-actions .sep { display: none; }
+  .iconbtn { height: 36px; min-width: 36px; font-size: 15px; }
+
+  /* Stage — strict column with no overflow. Filled exactly between the
+   * topbar (52 px incl. safe area) and the viewport bottom. */
+  .stage {
+    gap: 8px;
+    padding: 6px 10px;
+    padding-bottom: max(6px, env(safe-area-inset-bottom));
+    height: calc(100dvh - 52px - env(safe-area-inset-top, 0px));
+    justify-content: flex-start;
+  }
+
+  /* Game-wrap on mobile: HUD strip on row 1, board on row 2. */
   .game-wrap {
     grid-template-columns: 1fr;
-    gap: 10px;
+    grid-template-rows: auto auto;
+    gap: 8px;
+    width: 100%;
+    align-items: stretch;
   }
-  .hud { flex-direction: row; flex-wrap: wrap; gap: 10px; }
-  .hud-block { flex: 1; min-width: 0; padding: 8px 10px; }
-  .hud-block canvas { max-width: 80px; }
+
+  /* Both HUD strips share grid-row 1. We use display:contents to flatten
+   * .hud-left and .hud-right into the grid, then drop them into a flex
+   * pseudo-row via a single CSS rule on the wrap itself: each .hud becomes
+   * a flex child of the wrap, side-by-side on row 1. */
+  .hud-left  { grid-row: 1; grid-column: 1; }
+  .hud-right { grid-row: 1; grid-column: 1; pointer-events: none; }
+  .hud-right .hud-block { pointer-events: auto; }
+  .game-wrap > .board-frame { grid-row: 2; }
+
+  /* HUDs as horizontal chip strips. */
+  .hud {
+    flex-direction: row;
+    align-items: stretch;
+    height: auto;
+    gap: 8px;
+    width: 100%;
+  }
+  /* .hud-right has only the NEXT chip on mobile (keys are hidden). Pin it
+   * to the right side of row 1, overlaid on the same row as the left HUD.
+   * To avoid covering the STATS chip we reserve a gap on the left HUD
+   * for the next chip's width (~84 px = 36 canvas + label + padding). */
+  .hud-right { justify-content: flex-end; align-items: flex-start; }
+  .hud-left { padding-right: 92px; }
+
+  /* Left HUD owns the row: HOLD chip (icon-size) + STATS panel (flex grow). */
+  .hud-left .hud-block:nth-child(1) { flex: 0 0 auto; }
+  .hud-left .hud-block:nth-child(2) { flex: 1 1 auto; min-width: 0; }
+  .hud-right .hud-block:nth-child(1) { flex: 0 0 auto; }
+
+  /* Chip styling: compact, equal-height, label inline beside the canvas. */
+  .hud-block {
+    padding: 6px 8px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .hud-label {
+    font-size: 9px;
+    letter-spacing: .08em;
+    margin-bottom: 0;
+    flex-shrink: 0;
+  }
+
+  /* HOLD / NEXT canvases — fixed icon-sized squares so both HUD chips have
+   * the same height. NEXT is wider to show 2 upcoming pieces side-by-side
+   * (the renderer lays out pieces vertically inside the canvas, so we keep
+   * it tall but moderate). */
+  #hold-canvas { width: 44px !important; height: 44px !important; }
+  #next-canvas { width: 36px !important; height: 44px !important; }
+  .hud-block canvas { max-width: none; }
+  /* Hint hidden on mobile chip — the vpad has a dedicated H button. */
+  .hud-hint { display: none; }
+
+  /* STATS — inline 4-column grid so all 4 values fit in one chip row. */
+  .stats {
+    grid-template-columns: auto 1fr auto 1fr;
+    gap: 2px 6px;
+    width: 100%;
+  }
+  .stats dt { font-size: 10px; }
+  .stats dd { font-size: 13px; }
+
+  /* No keys list on mobile (vpad replaces it). */
   .hud-keys { display: none; }
-  /* Mobile: stack HUDs above and below board. The canvas inherits --board-h
-   * directly (just like desktop) — width is derived as height/2. We do NOT
-   * apply independent min(width, 80vw) and min(height, 160vw) clamps here
-   * because if width clamps but height doesn't (or vice versa), the canvas
-   * loses its 1:2 ratio and the play grid drifts from the frame. JS already
-   * accounts for mobile viewport width in computeFittedHeight(), so the
-   * board is guaranteed to fit. */
+
+  /* Board — inherit --board-h from JS. JS sizes mobile board to fit between
+   * the HUD strip and the vpad. CSS keeps the 1:2 ratio intact. */
+  .board-frame { padding: 6px; align-self: center; }
   #game-canvas {
     width: var(--board-w);
     height: var(--board-h);
   }
-  .stage { gap: 8px; padding: 4px 10px 10px; }
-  .overlay-card { padding: 18px 16px; width: min(220px, calc(100% - 24px)); gap: 12px; }
+
+  /* Vpad — the real mobile interface. Pinned at the bottom of the stage with
+   * generous touch targets. Grid is 3 cols x 2 rows: left/rotate/right then
+   * hold/soft/hard-drop. The hard-drop button gets accent treatment. */
+  .vpad {
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
+  }
+  body.vpad-on .vpad { display: grid; }
+  .vbtn {
+    height: clamp(52px, 9.5dvh, 72px);
+    font-size: clamp(20px, 5vw, 26px);
+    border-radius: 12px;
+    border-width: 1px;
+  }
+  .vbtn-drop {
+    font-weight: 700;
+    background: color-mix(in srgb, var(--color-accent) 28%, var(--color-surface));
+    border-color: color-mix(in srgb, var(--color-accent) 50%, var(--color-border));
+  }
+
+  /* Overlay card — nicely sized for portrait phones. */
+  .overlay-card { padding: 18px 16px; width: min(240px, calc(100% - 24px)); gap: 12px; }
+
+  /* Footer hidden on mobile to keep the single-screen rule. */
+  .footer { display: none; }
+}
+
+/* Extra-small phones (<= 360 px) — shave a few more pixels from chrome. */
+@media (max-width: 360px) {
+  .stage { padding: 4px 6px; gap: 6px; }
+  .topbar { padding: 4px 8px; }
+  .hud-block { padding: 4px 6px; gap: 6px; }
+  #hold-canvas { width: 36px !important; height: 36px !important; }
+  #next-canvas { width: 30px !important; height: 36px !important; }
+  .hud-left { padding-right: 80px; }
+  .stats dt { font-size: 9px; }
+  .stats dd { font-size: 12px; }
+  .vbtn { height: clamp(48px, 8.5dvh, 64px); font-size: 20px; }
+}
+
+/* Landscape phones — vpad shares the row with the board instead of stacking. */
+@media (max-width: 900px) and (orientation: landscape) and (max-height: 500px) {
+  .stage {
+    height: 100dvh;
+    padding: 4px 6px;
+  }
+  .game-wrap {
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto 1fr;
+  }
+  .game-wrap > .hud-left { grid-row: 1; grid-column: 1 / -1; }
+  .game-wrap > .hud-right { grid-row: 1; grid-column: 1 / -1; justify-self: end; }
+  .game-wrap > .board-frame { grid-row: 2; grid-column: 1; }
+  .vpad {
+    grid-row: 2; grid-column: 2;
+    width: 220px;
+    align-self: center;
+  }
+  .vbtn { height: clamp(44px, 12dvh, 56px); }
 }
 
 /* Short windows: shrink the overlay card a bit. Board sizing handled by

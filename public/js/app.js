@@ -25,7 +25,7 @@ import { Scoreboard } from './scoreboard.js';
 // Bump this string on every release; it ends up inside every signed receipt
 // so users can prove which client version played the game. Pair it with the
 // version string in index.html for consistency.
-const CLIENT_VERSION = '1.3.0';
+const CLIENT_VERSION = '1.4.0';
 
 // Convenience: jQuery's $ but it's just querySelector.
 const $ = (q) => document.querySelector(q);
@@ -91,15 +91,28 @@ function availableBoardHeight() {
     chromeY += outerH(child);
   }
 
-  // Mobile only: HUDs stack ABOVE and BELOW the board inside .game-wrap.
-  // Measure them directly instead of guessing a reserve.
+  // Mobile only: HUDs collapse into a single strip ABOVE the board inside
+  // .game-wrap (in v1.4.0 left+right HUDs share grid-row 1). Measure the
+  // TALLEST of the two (don't double-count overlapping siblings) plus one
+  // row-gap separating the HUD strip from the board.
   const isMobile = matchMedia('(max-width: 760px)').matches;
   if (isMobile) {
     const huds = wrap.querySelectorAll(':scope > .hud');
-    for (const hud of huds) chromeY += outerH(hud);
+    let tallestHud = 0;
+    for (const hud of huds) tallestHud = Math.max(tallestHud, outerH(hud));
+    chromeY += tallestHud;
     const wrapCs = getComputedStyle(wrap);
     const rowGap = parseFloat(wrapCs.rowGap || wrapCs.gap || 0);
-    if (rowGap) chromeY += rowGap * Math.max(0, wrap.children.length - 1);
+    if (rowGap) chromeY += rowGap;
+  }
+
+  // Board-frame's own padding + border eats into the canvas height —
+  // subtract it (both mobile and desktop) so the canvas fits the budget.
+  const frame = wrap.querySelector(':scope > .board-frame');
+  if (frame) {
+    const fcs = getComputedStyle(frame);
+    chromeY += parseFloat(fcs.paddingTop || 0) + parseFloat(fcs.paddingBottom || 0)
+             + parseFloat(fcs.borderTopWidth || 0) + parseFloat(fcs.borderBottomWidth || 0);
   }
 
   return Math.max(BOARD_MIN_H, stageRect.height - chromeY);

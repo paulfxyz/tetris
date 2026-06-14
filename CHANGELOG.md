@@ -2,6 +2,25 @@
 
 All notable changes to **tetris** will be documented here. Format inspired by [Keep a Changelog](https://keepachangelog.com/), versioning follows [SemVer](https://semver.org/).
 
+## [1.4.0] — 2026-06-14
+
+### Added
+- **Real mobile layout.** A dedicated single-screen design under 760 px wide: slim topbar, HOLD/STATS/NEXT chip strip above the board, board flush-centered, virtual pad pinned to the bottom with big touch targets. No more scrolling, no more wasted vertical space, no more tiny board.
+- **Hero hard-drop button.** The `⤵` button in the vpad is accent-tinted and weight-bumped — the most important touch action is now the most prominent.
+- **Landscape phone layout.** When the device is < 900 px wide AND < 500 px tall, the vpad moves next to the board (right side) instead of stacking below it, so the board can still use the full viewport height.
+- **Extra-small breakpoint (≤ 360 px).** Tighter chip padding, smaller HOLD/NEXT icons, and shorter vpad buttons so the game fits cleanly on iPhone SE-sized screens.
+
+### Changed
+- Mobile topbar hides zoom buttons (the board auto-fits the viewport — manual zoom is a desktop windowing affordance).
+- Mobile hides the footer (single-screen rule). The version badge in the topbar still links to the GitHub release.
+- HOLD / NEXT canvases are now icon-sized chips on mobile, not full panels.
+- Vpad: 6 buttons in a 3×2 grid (◀ ↻ ▶ / H ▼ ⤵), `clamp(52px, 9.5dvh, 72px)` tall.
+- Service worker cache bumped to `tetris-v1.4.0`.
+- README badge → 1.4.0.
+
+### Fixed
+- `computeFittedHeight()` now also subtracts the board-frame's own padding/border on both desktop and mobile, so the play grid lands flush against the frame inner edge.
+
 ## [1.3.0] — 2026-06-14
 
 ### Fixed
