@@ -21,16 +21,18 @@
 
   <!-- Top bar -->
   <header class="topbar">
-    <a class="brand" href="#" aria-label="tetris home">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <rect x="2" y="2" width="9" height="9" fill="currentColor"/>
-        <rect x="13" y="2" width="9" height="9" fill="currentColor" opacity=".6"/>
-        <rect x="2" y="13" width="9" height="9" fill="currentColor" opacity=".4"/>
-        <rect x="13" y="13" width="9" height="9" fill="currentColor" opacity=".8"/>
-      </svg>
-      <span>tetris</span>
-      <span class="brand-version">v1.2.0</span>
-    </a>
+    <div class="brand-group">
+      <a class="brand" href="/" aria-label="tetris — reload" title="Reload">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="2" y="2" width="9" height="9" fill="currentColor"/>
+          <rect x="13" y="2" width="9" height="9" fill="currentColor" opacity=".6"/>
+          <rect x="2" y="13" width="9" height="9" fill="currentColor" opacity=".4"/>
+          <rect x="13" y="13" width="9" height="9" fill="currentColor" opacity=".8"/>
+        </svg>
+        <span>tetris</span>
+      </a>
+      <a class="brand-version" href="https://github.com/paulfxyz/tetris/releases/tag/v1.2.0" target="_blank" rel="noopener" title="View this release on GitHub">v1.2.0</a>
+    </div>
     <nav class="topbar-actions">
       <button class="iconbtn" id="btn-zoom-out" title="Zoom out" aria-label="Zoom out">−</button>
       <button class="iconbtn" id="btn-zoom-reset" title="Fit to screen" aria-label="Fit">◱</button>
@@ -50,6 +52,10 @@
         <div class="hud-block">
           <div class="hud-label">hold</div>
           <canvas id="hold-canvas" width="96" height="96" aria-label="held piece"></canvas>
+          <div class="hud-hint" aria-hidden="true">
+            <span class="hint-desktop"><kbd>C</kbd> or <kbd>Shift</kbd></span>
+            <span class="hint-mobile">tap <kbd>H</kbd></span>
+          </div>
         </div>
         <div class="hud-block">
           <div class="hud-label">stats</div>
@@ -173,8 +179,8 @@
         <span><strong id="go-time">0:00</strong></span>
       </p>
 
-      <label class="row"><span>Name</span><input name="name" maxlength="32" required placeholder="Paul" autocomplete="off" /></label>
-      <label class="row"><span>Tagline</span><input name="tagline" maxlength="64" placeholder="just one more line…" autocomplete="off" /></label>
+      <label class="row"><span>Name</span><input name="name" maxlength="32" required placeholder="John Doe" autocomplete="off" /></label>
+      <label class="row"><span>Tagline</span><input name="tagline" maxlength="64" placeholder="I'm a Tetris fan" autocomplete="off" /></label>
       <label class="row"><span>Email</span><input name="email" type="email" maxlength="120" placeholder="you@example.com" autocomplete="off" /></label>
 
       <p class="hint" id="go-status"></p>

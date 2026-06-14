@@ -34,11 +34,14 @@ body {
   padding: 14px 20px;
   padding-top: max(14px, env(safe-area-inset-top));
 }
+.brand-group { display: inline-flex; align-items: center; gap: 10px; }
 .brand {
   display: inline-flex; align-items: center; gap: 10px;
   text-decoration: none; color: var(--color-text);
   font-weight: 700; letter-spacing: -.01em;
+  cursor: pointer;
 }
+.brand:hover { opacity: .85; }
 .brand svg { color: var(--color-accent); }
 .brand-version {
   font-family: 'JetBrains Mono', monospace;
@@ -47,7 +50,10 @@ body {
   padding: 2px 6px;
   border: 1px solid var(--color-border);
   border-radius: 4px;
+  text-decoration: none;
+  transition: color .15s ease, border-color .15s ease;
 }
+.brand-version:hover { color: var(--color-text); border-color: var(--color-text-muted); }
 .topbar-actions { display: flex; align-items: center; gap: 6px; }
 .iconbtn {
   height: 32px; min-width: 32px; padding: 0 8px;
