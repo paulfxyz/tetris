@@ -260,9 +260,20 @@ $('#btn-mode').addEventListener('click', () => {
   settings.set('mode', settings.get('mode') === 'dark' ? 'light' : 'dark');
   applySettings();
 });
-$('#btn-zoom-in').addEventListener('click', () => { settings.set('zoom', Math.min(160, settings.get('zoom') + 10)); applySettings(); });
-$('#btn-zoom-out').addEventListener('click', () => { settings.set('zoom', Math.max(60, settings.get('zoom') - 10)); applySettings(); });
-$('#btn-zoom-reset').addEventListener('click', () => { settings.set('fit', true); fitToScreen(); });
+// Manual zoom buttons disable the auto-fit flag so the user's choice sticks.
+// Otherwise applySettings() would immediately overwrite the zoom via fitToScreen().
+$('#btn-zoom-in').addEventListener('click', () => {
+  settings.patch({ fit: false, zoom: Math.min(160, settings.get('zoom') + 10) });
+  applySettings();
+});
+$('#btn-zoom-out').addEventListener('click', () => {
+  settings.patch({ fit: false, zoom: Math.max(60, settings.get('zoom') - 10) });
+  applySettings();
+});
+$('#btn-zoom-reset').addEventListener('click', () => {
+  settings.set('fit', true);
+  fitToScreen();
+});
 
 // Sync sound + scoreboard with persisted settings at boot. Music is wired
 // up but only actually starts after the first user gesture ("Press Start"
@@ -287,9 +298,11 @@ function openGameOver() {
   $('#go-level').textContent = engine.level;
   $('#go-time').textContent = formatTime(engine.elapsedMs());
   // Tell the user whether they're getting a signed or unsigned receipt.
-  $('#go-status').textContent = scoreboard.serverAvailable()
-    ? `Server: ${settings.get('server')} — your score will be signed.`
-    : 'No server set — you can still download an unsigned local receipt.';
+  // Tell the user what's about to happen + current connectivity status.
+  const available = scoreboard.serverAvailable();
+  $('#go-status').textContent = available
+    ? "Your score will be PGP signed upon download or submission. — Server reachable."
+    : "Your score will be PGP signed upon download or submission. — Server unreachable: local unsigned receipt only.";
   goDialog.showModal();
 }
 
