@@ -6,8 +6,15 @@
  * user's manual zoom (60–160%). All downstream sizes (canvas, HUDs, gap) derive
  * from this so the layout cannot disagree with itself. */
 .game-wrap {
+  /* v1.4.1: both --board-h AND --board-w set explicitly by app.js (applyBoardSize).
+   * The JS computes an INTEGER cell size that fits both height & width budgets,
+   * then sets --board-h = cell*20 and --board-w = cell*10. CSS never derives
+   * either dimension from the other — that was the v1.4.0 bug: --board-w =
+   * calc(--board-h/2) plus a CSS transition meant the canvas's width and height
+   * could disagree mid-transition, leaving a phantom empty band at the bottom
+   * of the board frame. No transitions on board dims — instant snap. */
   --board-h: 600px;
-  --board-w: calc(var(--board-h) / 2);
+  --board-w: 300px;
   --hud-w: clamp(96px, calc(var(--board-h) * .22), 150px);
   --gap: clamp(8px, calc(var(--board-h) * .03), 22px);
 
@@ -21,8 +28,11 @@
   align-items: start;
   /* No transform: scale() anywhere. Zoom is realized by changing --board-h
    * directly, which makes the canvas's CSS size change — so getBoundingClientRect()
-   * and canvas.width agree, no aliasing, no smear, no empty space mismatch. */
-  transition: --board-h .2s ease;
+   * and canvas.width agree, no aliasing, no smear, no empty space mismatch.
+   * No CSS transition on --board-h / --board-w either: a 200 ms tween between
+   * old and new sizes made renderer.resize() (called after a double-rAF) capture
+   * an intermediate width while the final height kept growing — exactly what
+   * produced the empty band reported in v1.4.0. Snap instantly instead. */
 }
 
 /* HUDs flex to fill the board's height: HOLD (or NEXT) sits flush at the top,
@@ -30,11 +40,6 @@
  * both side rails visually aligned with the top and bottom of the board
  * regardless of how tall the board ends up. */
 .hud { height: var(--board-h); justify-content: space-between; }
-@property --board-h {
-  syntax: '<length>';
-  inherits: true;
-  initial-value: 600px;
-}
 
 .hud { display: flex; flex-direction: column; gap: 14px; }
 .hud-block {

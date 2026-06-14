@@ -2,6 +2,18 @@
 
 All notable changes to **tetris** will be documented here. Format inspired by [Keep a Changelog](https://keepachangelog.com/), versioning follows [SemVer](https://semver.org/).
 
+## [1.4.1] — 2026-06-14
+
+### Fixed
+- **Bottom-of-frame empty band on desktop and mobile.** v1.4.0 set `--board-h` from JS and derived `--board-w` via CSS `calc(--board-h / 2)`, with a 200 ms transition on the property. After a zoom or resize, the renderer (called via double-rAF) measured the canvas mid-tween: width was still catching up while the height kept growing toward its final value. The renderer locked in a cell size based on the intermediate width, so the play grid stopped short of the bottom of the frame — the empty rectangle visible in the screenshot.
+- **New sizing model.** `cell` (in integer CSS pixels) is now the single source of truth. JS computes the largest integer cell that fits both the height and width budgets, then sets BOTH `--board-h = cell * 20` AND `--board-w = cell * 10` explicitly on `.game-wrap`. CSS no longer derives one dimension from the other.
+- **No CSS transition on board dims.** The instant snap eliminates the mid-tween mismatch entirely. Zoom and resize still feel smooth because the per-step delta is small; what users gain is pixel-exactness at every step.
+- **Mobile budget unchanged but now correct.** Same chip-strip + vpad chrome math as v1.4.0, but the board itself is now guaranteed to fill the frame to the pixel on every iPhone-class device, including SE.
+
+### Changed
+- Service worker cache bumped to `tetris-v1.4.1`.
+- README badge → 1.4.1.
+
 ## [1.4.0] — 2026-06-14
 
 ### Added

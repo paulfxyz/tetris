@@ -14,7 +14,7 @@
 // module. That's fine — the other modules know about nothing.
 // ============================================================================
 
-import { Engine, ROWS } from './engine.js';
+import { Engine, ROWS, COLS } from './engine.js';
 import { Renderer } from './renderer.js';
 import { Input } from './input.js';
 import { Background } from './background.js';
@@ -25,7 +25,7 @@ import { Scoreboard } from './scoreboard.js';
 // Bump this string on every release; it ends up inside every signed receipt
 // so users can prove which client version played the game. Pair it with the
 // version string in index.html for consistency.
-const CLIENT_VERSION = '1.4.0';
+const CLIENT_VERSION = '1.4.1';
 
 // Convenience: jQuery's $ but it's just querySelector.
 const $ = (q) => document.querySelector(q);
@@ -54,9 +54,14 @@ const $ = (q) => document.querySelector(q);
 //
 // We also measure the actual rendered chrome (page header, HUDs, vpad) via
 // real DOM rects instead of guessing with a hardcoded mobile reservation.
-const BOARD_ASPECT = 2;          // height / width
-const BOARD_MIN_H = ROWS * 14;    // 280 — never go below 14 px cells
-const BOARD_MAX_H = ROWS * 46;    // 920 — never balloon past 46 px cells
+// v1.4.1 — cell size (px) is the integer source of truth. JS picks the
+// largest integer cell that fits BOTH budgets, then derives --board-h and
+// --board-w from it. CSS no longer derives one dim from the other.
+const BOARD_ASPECT = 2;          // height / width (ROWS=20 / COLS=10)
+const CELL_MIN = 14;             // never go below 14 px cells
+const CELL_MAX = 46;             // never balloon past 46 px cells
+const BOARD_MIN_H = ROWS * CELL_MIN; // 280
+const BOARD_MAX_H = ROWS * CELL_MAX; // 920
 
 // Snap a board height down to the nearest multiple of ROWS so each cell
 // is an integer number of CSS pixels. Returns an integer >= ROWS.
@@ -149,19 +154,33 @@ function applyBoardSize() {
   const wrap = document.getElementById('game-wrap');
   if (!wrap) return;
   const s = settings.state;
-  const base = computeFittedHeight();
+
+  // 1) Budgets in CSS pixels (post-chrome, post-padding, post-border).
+  const availH = availableBoardHeight();
+  const availW = availableBoardWidth();
+
+  // 2) Largest INTEGER cell that fits both budgets, then apply zoom & clamps.
+  //    cellFromH = availH / ROWS; cellFromW = availW / COLS. Use min, floor.
+  const cellFit = Math.max(1, Math.floor(Math.min(availH / ROWS, availW / COLS)));
   const z = (s.zoom || 100) / 100;
-  // Cap zoom-in at the available budget so the bottom row can never clip
-  // out of the frame. Same math as the fitted base — so it stays grid-aligned.
-  const ceilingRaw = Math.min(availableBoardHeight(), availableBoardWidth() * BOARD_ASPECT, BOARD_MAX_H);
-  const ceiling = Math.max(BOARD_MIN_H, snapToGrid(ceilingRaw));
-  const target = Math.min(base * z, ceiling);
-  const boardH = Math.max(BOARD_MIN_H, snapToGrid(target));
+  const ceilingCell = Math.min(cellFit, CELL_MAX);
+  const zoomedCell = Math.floor(cellFit * z);
+  let cell = Math.min(zoomedCell, ceilingCell);
+  cell = Math.max(CELL_MIN, cell);
+
+  // 3) Derive --board-h and --board-w from the SAME integer cell. The grid
+  //    column and canvas are now guaranteed to agree, so renderer.resize()
+  //    (cell = rect.width / COLS) draws exactly 20 rows that fill the canvas
+  //    height edge-to-edge. No empty band, no clipped bottom row, at any zoom.
+  const boardH = cell * ROWS;
+  const boardW = cell * COLS;
   wrap.style.setProperty('--board-h', boardH + 'px');
-  // Renderer's bitmap must follow the new CSS size. Double-rAF so we wait
-  // for both: style applied + layout flushed. Otherwise getBoundingClientRect()
-  // inside renderer.resize() returns the previous width and we get a brief
-  // mismatch on the first frame after zoom.
+  wrap.style.setProperty('--board-w', boardW + 'px');
+
+  // Renderer's bitmap must follow the new CSS size. Double-rAF waits for
+  // style applied + layout flushed. Without the v1.4.0 CSS transition
+  // mid-tween mismatch (now removed), one rAF would suffice — two is
+  // bulletproof on devices with deferred layout.
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       if (typeof renderer !== 'undefined') renderer.resize();
