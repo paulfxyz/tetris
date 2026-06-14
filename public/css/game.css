@@ -89,7 +89,14 @@ html[data-theme="color"] .hud-block { border-radius: 4px; box-shadow: inset 0 0 
   height: clamp(600px, 70dvh, 840px);
   max-height: calc(100dvh - 200px);
   aspect-ratio: 1 / 2;
-  image-rendering: pixelated;
+  /* image-rendering: auto on the main board so fractional downscale (when the
+   * --zoom transform shrinks the wrap) uses smooth bilinear filtering instead
+   * of nearest-neighbor. With `pixelated` at zoom-out, the high-DPR bitmap
+   * gets sampled into a much smaller display area and rows of cells aliased
+   * into visible horizontal stripes that looked like a smear trail.
+   * The per-theme `pixelated` override is preserved on Classic & Color which
+   * are 1:1 and benefit from sharp edges. */
+  image-rendering: auto;
 }
 
 /* Overlay (title / pause / game over).
