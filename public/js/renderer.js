@@ -195,7 +195,15 @@ export class Renderer {
     const ctx = this.ctx;
     const rect = this.canvas.getBoundingClientRect();
     const cell = rect.width / COLS;
-    ctx.clearRect(0, 0, rect.width, rect.height);
+    // Wipe the FULL bitmap (not the CSS rect) every frame. See drawMini's
+    // EDUCATIONAL GOTCHA comment for the full explanation. When the parent is
+    // scaled (CSS transform) or DPR > 1, clearRect(0, 0, rect.width, rect.height)
+    // does NOT cover the whole canvas bitmap and leaves diagonal smear trails
+    // after zoom-out. Reset transform -> wipe bitmap -> restore.
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    ctx.restore();
 
     // 1) Grid — thin lines on every internal column/row boundary.
     //    Half-pixel offset (`+ .5`) so lines hit physical pixel edges crisply.

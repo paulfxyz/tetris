@@ -25,7 +25,7 @@ import { Scoreboard } from './scoreboard.js';
 // Bump this string on every release; it ends up inside every signed receipt
 // so users can prove which client version played the game. Pair it with the
 // version string in index.html for consistency.
-const CLIENT_VERSION = '1.2.0';
+const CLIENT_VERSION = '1.2.1';
 
 // Convenience: jQuery's $ but it's just querySelector.
 const $ = (q) => document.querySelector(q);
@@ -262,17 +262,23 @@ $('#btn-mode').addEventListener('click', () => {
 });
 // Manual zoom buttons disable the auto-fit flag so the user's choice sticks.
 // Otherwise applySettings() would immediately overwrite the zoom via fitToScreen().
+// We also re-resize the renderer's canvas bitmaps on the next frame so they match
+// the new CSS-scaled dimensions (sharper output, no stale-bitmap trails).
+function refreshRendererSize() { requestAnimationFrame(() => renderer.resize()); }
 $('#btn-zoom-in').addEventListener('click', () => {
   settings.patch({ fit: false, zoom: Math.min(160, settings.get('zoom') + 10) });
   applySettings();
+  refreshRendererSize();
 });
 $('#btn-zoom-out').addEventListener('click', () => {
   settings.patch({ fit: false, zoom: Math.max(60, settings.get('zoom') - 10) });
   applySettings();
+  refreshRendererSize();
 });
 $('#btn-zoom-reset').addEventListener('click', () => {
   settings.set('fit', true);
   fitToScreen();
+  refreshRendererSize();
 });
 
 // Sync sound + scoreboard with persisted settings at boot. Music is wired

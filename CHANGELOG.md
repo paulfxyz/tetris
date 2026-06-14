@@ -2,6 +2,23 @@
 
 All notable changes to **tetris** will be documented here. Format inspired by [Keep a Changelog](https://keepachangelog.com/), versioning follows [SemVer](https://semver.org/).
 
+## [1.2.1] — 2026-06-14
+
+### Added
+- **Hold-box hint.** The HOLD panel now shows `C or Shift` on desktop and `tap H` on touch devices, so players discover the swap mechanic without reading docs.
+- **Brand reload + version link.** Clicking the `tetris` logo reloads the page; the `vX.Y.Z` badge links to that exact GitHub release in a new tab.
+
+### Fixed
+- **Canvas trail / smear on zoom-out.** When the board was scaled down via CSS `transform: scale()`, `drawBoard()` cleared in CSS-rect coordinates while the bitmap kept its larger dimensions — leaving stale pixels in the un-cleared region, visible as diagonal trails below the lowest blocks. The board now wipes the FULL bitmap each frame (same pattern already used by `drawMini` for HOLD / NEXT), and manual zoom triggers `renderer.resize()` so the bitmap matches the new CSS size.
+- **Zoom +/− buttons now stick.** Clicking “Fit to screen” had set a `fit: true` flag that `applySettings()` honored on every subsequent action, immediately overwriting any manual zoom. Manual zoom now clears `fit` so the user's choice persists.
+- **Skip button in the score modal closes the dialog.** It was silently swallowed by HTML5 form validation on the `required` Name input; `formnovalidate` lets Skip bypass validation.
+
+### Changed
+- Score-save modal status line is friendlier and clearer: "Your score will be PGP signed upon download or submission." followed by current server reachability.
+- Modal placeholders refreshed: `John Doe` (name), `I'm a Tetris fan` (tagline).
+- Service worker cache bumped to `tetris-v1.2.4`.
+- README badge → 1.2.1.
+
 ## [1.2.0] — 2026-06-14
 
 ### Added
