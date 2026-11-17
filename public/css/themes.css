@@ -1,5 +1,5 @@
 /* tetris — themes.css
- * 3 themes × 2 modes (dark/light). Theme is set on <html data-theme=…> data-mode=…
+ * 4 themes × 2 modes (dark/light). Theme is set on <html data-theme=…> data-mode=…
  *
  * Tokens:
  *   --color-bg              page background
@@ -179,4 +179,57 @@ html[data-theme="classic"][data-mode="light"] {
   --piece-Z: #666666;
   --piece-J: #808080;
   --piece-L: #999999;
+}
+
+/* =====================================================================
+ * VICE — GTA VI tribute (v1.5.7). Leonida sunset: hot pink, sunset
+ * orange, dusk magenta-purple, Miami teal. Glass blocks, full glow.
+ * ===================================================================== */
+html[data-theme="vice"][data-mode="dark"] {
+  --color-bg: #1a0b2e;
+  --color-surface: rgba(255, 45, 149, .07);
+  --color-surface-strong: #24103d;
+  --color-surface-hover: rgba(255, 45, 149, .14);
+  --color-border: rgba(255, 120, 190, .22);
+  --color-text: #fff3fa;
+  --color-text-muted: #f0a6cf;
+  --color-accent: #ff2d95;
+  --color-on-accent: #ffffff;
+  --color-grid: rgba(255, 120, 190, .08);
+  --color-board-bg: rgba(20, 6, 36, .62);
+  --font-game: 'Anton', 'Space Grotesk', sans-serif;
+  --board-style: glass;
+  --bg-opacity: .40;
+  --modern-glow: 1;
+  --piece-I: #00e5d4;
+  --piece-O: #ffd23f;
+  --piece-T: #b5179e;
+  --piece-S: #7bed9f;
+  --piece-Z: #ff2d95;
+  --piece-J: #4361ee;
+  --piece-L: #ff8a3d;
+}
+html[data-theme="vice"][data-mode="light"] {
+  --color-bg: #ffd6ec;
+  --color-surface: rgba(255, 255, 255, .55);
+  --color-surface-strong: #fff4fa;
+  --color-surface-hover: rgba(255, 255, 255, .75);
+  --color-border: rgba(120, 20, 90, .20);
+  --color-text: #2a0838;
+  --color-text-muted: #8a2a6e;
+  --color-accent: #e0157f;
+  --color-on-accent: #ffffff;
+  --color-grid: rgba(120, 20, 90, .07);
+  --color-board-bg: rgba(255, 244, 250, .72);
+  --font-game: 'Anton', 'Space Grotesk', sans-serif;
+  --board-style: glass;
+  --bg-opacity: .30;
+  --modern-glow: .7;
+  --piece-I: #00b8aa;
+  --piece-O: #f5b700;
+  --piece-T: #9d0b8a;
+  --piece-S: #2ecc71;
+  --piece-Z: #e0157f;
+  --piece-J: #3a0ca3;
+  --piece-L: #f3722c;
 }

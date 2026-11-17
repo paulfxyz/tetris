@@ -1,10 +1,10 @@
 # 🟦 tetris
 
-> Drop, line, repeat. A modern, offline-capable Tetris in pure HTML/JS — keyboard, touch & virtual pad, three themes (Classic B&W, Color, Modern Glass), and a **PGP-signed** scoreboard.
+> Drop, line, repeat. A modern, offline-capable Tetris in pure HTML/JS — keyboard, touch & virtual pad, four themes (Classic B&W, Color, Modern Glass, Vice — a GTA VI tribute), and a **PGP-signed** scoreboard.
 
 **Play it now → [tetris.rocks](https://tetris.rocks/)**
 
-[![Version](https://img.shields.io/badge/version-1.5.6-blue.svg)](https://github.com/paulfxyz/tetris/releases/tag/v1.5.6)
+[![Version](https://img.shields.io/badge/version-1.5.7-blue.svg)](https://github.com/paulfxyz/tetris/releases/tag/v1.5.7)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![No deps](https://img.shields.io/badge/frontend-zero%20deps-brightgreen)](#)
 [![Offline ready](https://img.shields.io/badge/PWA-offline%20ready-success)](#)
@@ -102,7 +102,7 @@ The frontend is intentionally small (~1,500 LOC of JS, ~600 of CSS). It is struc
 
 Then the CSS:
 
-9. **[`themes.css`](public/css/themes.css)** — three themes × two modes via CSS custom properties on `<html data-theme=… data-mode=…>`. Theming an entire game with ~20 tokens.
+9. **[`themes.css`](public/css/themes.css)** — four themes × two modes via CSS custom properties on `<html data-theme=… data-mode=…>`. Theming an entire game with ~20 tokens.
 10. **[`game.css`](public/css/game.css)** — layout, the animations applied **only** to the Modern theme, footer styling.
 11. **[`base.css`](public/css/base.css)** — reset, typography, button defaults.
 
@@ -247,7 +247,7 @@ tetris/
 │   ├── sw.js                # service worker (offline cache)
 │   ├── css/
 │   │   ├── base.css         # reset + typography + buttons
-│   │   ├── themes.css       # classic / color / modern × dark / light
+│   │   ├── themes.css       # classic / color / modern / vice × dark / light
 │   │   └── game.css         # layout + modern-theme animations + footer
 │   ├── js/
 │   │   ├── app.js           # boot, game loop, overlay state machine

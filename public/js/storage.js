@@ -19,7 +19,7 @@
 const KEY = 'tetris:settings';
 
 const DEFAULTS = {
-  theme: 'modern',     // classic | color | modern
+  theme: 'modern',     // classic | color | modern | vice
   mode: 'dark',        // dark | light
   zoom: 100,           // %  (60..160)
   fit: false,          // auto-fit to viewport on load

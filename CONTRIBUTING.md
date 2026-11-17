@@ -36,7 +36,7 @@ node --input-type=module -e "
 
 - [ ] Game still loads from `file://` and a plain static server.
 - [ ] No new frontend dependencies.
-- [ ] All three themes still look good (Classic / Color / Modern, both light and dark).
+- [ ] All four themes still look good (Classic / Color / Modern / Vice, both light and dark).
 - [ ] Mobile (≤ 760px viewport, touch) still works.
 - [ ] No regressions in the offline service worker — bump the `CACHE` version in `public/sw.js` if you change cached assets.
 - [ ] If you touch the engine, run the test snippets in this file.

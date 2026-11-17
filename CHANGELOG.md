@@ -2,6 +2,16 @@
 
 All notable changes to **tetris** will be documented here. Format inspired by [Keep a Changelog](https://keepachangelog.com/), versioning follows [SemVer](https://semver.org/).
 
+## [1.5.7] — 2026-11-17
+
+### Added
+- **Vice theme — a fan tribute to the GTA VI release.** Fourth theme alongside Classic, Color and Modern, in both dark and light modes. Leonida-sunset palette (hot pink `#ff2d95`, sunset orange `#ff8a3d`, dusk magenta-purple `#b5179e`, Miami teal `#00e5d4`, gold `#ffd23f`), a fixed dusk-to-pink sky gradient behind the whole page, and Anton, a heavy condensed display face, for the title, wordmark and HUD numbers. The title gets a gold → orange → pink gradient fill with a hard drop-shadow; Press Start becomes a pink → orange gradient pill.
+- Vice reuses every Modern effect (glass blocks, board glow pulse, aurora wash, CTA shake, staggered stat glow). The Modern-only selectors in `game.css` are now `html:is([data-theme="modern"],[data-theme="vice"])`, so neither theme duplicates the other's animation code. The renderer needed no changes: it reads `--board-style` and `--piece-*` tokens and never branches on theme name.
+
+### Changed
+- Google Fonts request now includes Anton.
+- README, CONTRIBUTING and the `themes.css` header now say four themes.
+
 ## [1.5.6] — 2026-06-14
 
 ### Fixed

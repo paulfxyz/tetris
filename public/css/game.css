@@ -555,7 +555,7 @@ body.vpad-on .vpad { display: grid; }
  * by only a few pixels. Followed by a long rest phase so the motion stays
  * an attention-grabber rather than a distraction. The translation amount
  * is small enough that the button never approaches its container edges. */
-html[data-theme="modern"] .overlay-card .cta {
+html:is([data-theme="modern"],[data-theme="vice"]) .overlay-card .cta {
   position: relative;
   transform-origin: center;
 }
@@ -572,7 +572,7 @@ html[data-theme="modern"] .overlay-card .cta {
 /* =====================================================================
  * MODERN — extra animations and effects (all IN-PLACE, no horizontal drift)
  * ===================================================================== */
-html[data-theme="modern"] .board-frame {
+html:is([data-theme="modern"],[data-theme="vice"]) .board-frame {
   box-shadow:
     0 0 0 1px var(--color-border),
     0 0 30px color-mix(in srgb, var(--color-accent) 18%, transparent),
@@ -584,7 +584,7 @@ html[data-theme="modern"] .board-frame {
   50%      { box-shadow: 0 0 0 1px var(--color-border), 0 0 40px color-mix(in srgb, var(--color-accent) 28%, transparent), 0 18px 70px rgba(0,0,0,.5); }
 }
 
-html[data-theme="modern"] .hud-block {
+html:is([data-theme="modern"],[data-theme="vice"]) .hud-block {
   background:
     linear-gradient(135deg, rgba(255,255,255,.06) 0%, transparent 50%),
     var(--color-surface);
@@ -595,7 +595,7 @@ html[data-theme="modern"] .hud-block {
  * A 4-block logo rotating 360° looked off-axis and unbalanced. Now it
  * gently scales/breathes and the inner rects twinkle in sequence —
  * still alive, never wandering. */
-html[data-theme="modern"] .brand svg {
+html:is([data-theme="modern"],[data-theme="vice"]) .brand svg {
   animation: brand-breathe 3.2s ease-in-out infinite;
   transform-origin: center;
 }
@@ -603,30 +603,30 @@ html[data-theme="modern"] .brand svg {
   0%, 100% { transform: scale(1);    filter: drop-shadow(0 0 4px color-mix(in srgb, var(--color-accent) 30%, transparent)); }
   50%      { transform: scale(1.06); filter: drop-shadow(0 0 10px color-mix(in srgb, var(--color-accent) 55%, transparent)); }
 }
-html[data-theme="modern"] .brand svg rect {
+html:is([data-theme="modern"],[data-theme="vice"]) .brand svg rect {
   animation: modern-twinkle 2.4s ease-in-out infinite;
   transform-origin: center;
   transform-box: fill-box;
 }
-html[data-theme="modern"] .brand svg rect:nth-child(2) { animation-delay: .2s; }
-html[data-theme="modern"] .brand svg rect:nth-child(3) { animation-delay: .4s; }
-html[data-theme="modern"] .brand svg rect:nth-child(4) { animation-delay: .6s; }
+html:is([data-theme="modern"],[data-theme="vice"]) .brand svg rect:nth-child(2) { animation-delay: .2s; }
+html:is([data-theme="modern"],[data-theme="vice"]) .brand svg rect:nth-child(3) { animation-delay: .4s; }
+html:is([data-theme="modern"],[data-theme="vice"]) .brand svg rect:nth-child(4) { animation-delay: .6s; }
 @keyframes modern-twinkle {
   0%, 100% { opacity: .55; transform: scale(1); }
   50%      { opacity: 1;   transform: scale(1.08); }
 }
 
-html[data-theme="modern"] #game-canvas {
+html:is([data-theme="modern"],[data-theme="vice"]) #game-canvas {
   filter: drop-shadow(0 0 8px color-mix(in srgb, var(--color-accent) 25%, transparent));
 }
 
 /* Hold / Next panels: very subtle vertical breathing (max 2px) so the
  * panels feel alive without distracting from the falling pieces. */
-html[data-theme="modern"] #hold-canvas,
-html[data-theme="modern"] #next-canvas {
+html:is([data-theme="modern"],[data-theme="vice"]) #hold-canvas,
+html:is([data-theme="modern"],[data-theme="vice"]) #next-canvas {
   animation: modern-float 5s ease-in-out infinite;
 }
-html[data-theme="modern"] #next-canvas { animation-delay: -2.5s; }
+html:is([data-theme="modern"],[data-theme="vice"]) #next-canvas { animation-delay: -2.5s; }
 @keyframes modern-float {
   0%, 100% { transform: translateY(0); }
   50%      { transform: translateY(-2px); }
@@ -635,7 +635,7 @@ html[data-theme="modern"] #next-canvas { animation-delay: -2.5s; }
 /* CTA gradient + the shake animation. The gradient is static (no animated
  * background-position) so the only motion is the controlled shake. Glow
  * pulses gently along with each shake to give the impulse some weight. */
-html[data-theme="modern"] .overlay-card .cta {
+html:is([data-theme="modern"],[data-theme="vice"]) .overlay-card .cta {
   background: linear-gradient(135deg,
     var(--color-accent) 0%,
     color-mix(in srgb, var(--color-accent) 60%, #9b5cff) 50%,
@@ -652,23 +652,23 @@ html[data-theme="modern"] .overlay-card .cta {
 }
 
 /* Stats values glow staggered — calm equalizer feel down the right rail. */
-html[data-theme="modern"] .stats dd {
+html:is([data-theme="modern"],[data-theme="vice"]) .stats dd {
   text-shadow: 0 0 8px color-mix(in srgb, var(--color-accent) 30%, transparent);
   animation: stats-glow 2.8s ease-in-out infinite;
 }
-html[data-theme="modern"] .stats dd:nth-of-type(2) { animation-delay: .4s; }
-html[data-theme="modern"] .stats dd:nth-of-type(3) { animation-delay: .8s; }
-html[data-theme="modern"] .stats dd:nth-of-type(4) { animation-delay: 1.2s; }
+html:is([data-theme="modern"],[data-theme="vice"]) .stats dd:nth-of-type(2) { animation-delay: .4s; }
+html:is([data-theme="modern"],[data-theme="vice"]) .stats dd:nth-of-type(3) { animation-delay: .8s; }
+html:is([data-theme="modern"],[data-theme="vice"]) .stats dd:nth-of-type(4) { animation-delay: 1.2s; }
 @keyframes stats-glow {
   0%, 100% { text-shadow: 0 0 6px  color-mix(in srgb, var(--color-accent) 22%, transparent); }
   50%      { text-shadow: 0 0 14px color-mix(in srgb, var(--color-accent) 55%, transparent); }
 }
 
 /* Animated underline accent beneath each HUD label — fades in/out only. */
-html[data-theme="modern"] .hud-label {
+html:is([data-theme="modern"],[data-theme="vice"]) .hud-label {
   position: relative;
 }
-html[data-theme="modern"] .hud-label::after {
+html:is([data-theme="modern"],[data-theme="vice"]) .hud-label::after {
   content: '';
   position: absolute; left: 0; right: 0; bottom: -3px;
   height: 1px;
@@ -686,8 +686,8 @@ html[data-theme="modern"] .hud-label::after {
 
 /* Aurora wash behind the board — soft radial gradients that scale gently
  * in place. Clipped by .game-wrap so it never escapes the layout. */
-html[data-theme="modern"] .game-wrap { position: relative; }
-html[data-theme="modern"] .game-wrap::before {
+html:is([data-theme="modern"],[data-theme="vice"]) .game-wrap { position: relative; }
+html:is([data-theme="modern"],[data-theme="vice"]) .game-wrap::before {
   content: '';
   position: absolute; inset: -10px;
   background:
@@ -706,7 +706,7 @@ html[data-theme="modern"] .game-wrap::before {
 /* Overlay card (Press Start / Pause / Game Over) — modern theme makeover.
  * Layered gradient background (subtle top sheen + accent tint), a brighter
  * accent border, and a soft accent-coloured vignette that pulses gently. */
-html[data-theme="modern"] .overlay-card {
+html:is([data-theme="modern"],[data-theme="vice"]) .overlay-card {
   background:
     linear-gradient(180deg, rgba(255,255,255,.06) 0%, transparent 40%),
     radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--color-accent) 12%, transparent) 0%, transparent 60%),
@@ -779,6 +779,57 @@ html[data-theme="color"] #hold-canvas, html[data-theme="color"] #next-canvas { a
   transition: color .15s, border-color .15s;
 }
 .footer a:hover { color: var(--color-accent); border-bottom-color: var(--color-accent); }
-html[data-theme="modern"] .footer a:hover { text-shadow: 0 0 8px color-mix(in srgb, var(--color-accent) 50%, transparent); }
+html:is([data-theme="modern"],[data-theme="vice"]) .footer a:hover { text-shadow: 0 0 8px color-mix(in srgb, var(--color-accent) 50%, transparent); }
 html[data-theme="color"] .footer { font-family: var(--font-game); font-size: 9px; line-height: 1.9; letter-spacing: .04em; }
 .footer .sep { opacity: .4; margin: 0 8px; }
+
+
+/* =====================================================================
+ * VICE (v1.5.7) — fan tribute to the GTA VI release.
+ * Inherits every Modern effect above (glass blocks, glow, aurora, CTA
+ * shake) via the :is() selectors, then layers on the Vice identity:
+ * a Leonida sunset sky behind everything, a heavy condensed display
+ * face for headings and numbers, and a pink → orange gradient wordmark.
+ * ===================================================================== */
+html[data-theme="vice"] body {
+  background:
+    radial-gradient(90% 55% at 50% 108%, rgba(255, 138, 61, .55) 0%, transparent 60%),
+    radial-gradient(70% 50% at 85% 12%, rgba(0, 229, 212, .16) 0%, transparent 60%),
+    linear-gradient(180deg, #1a0b2e 0%, #3d0f4f 45%, #8a1458 78%, #d6336c 100%);
+  background-attachment: fixed;
+}
+html[data-theme="vice"][data-mode="light"] body {
+  background:
+    radial-gradient(80% 50% at 50% 105%, rgba(255, 190, 90, .55) 0%, transparent 60%),
+    linear-gradient(180deg, #ffd6ec 0%, #ffb3d9 50%, #ff9ec4 100%);
+  background-attachment: fixed;
+}
+html[data-theme="vice"] .overlay-card h1,
+html[data-theme="vice"] .brand,
+html[data-theme="vice"] .stats dd,
+html[data-theme="vice"] .mb-stat-v {
+  font-family: 'Anton', 'Space Grotesk', sans-serif;
+  letter-spacing: .02em;
+}
+html[data-theme="vice"] .overlay-card h1 {
+  font-size: clamp(36px, 7vw, 56px);
+  text-transform: uppercase;
+  line-height: .95;
+  background: linear-gradient(180deg, #ffd23f 0%, #ff8a3d 40%, #ff2d95 75%, #b5179e 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 3px 0 #1a0b2e) drop-shadow(0 0 18px rgba(255, 45, 149, .45));
+}
+html[data-theme="vice"] .overlay-card .cta {
+  background: linear-gradient(135deg, #ff2d95 0%, #ff5e62 50%, #ff8a3d 100%);
+  color: #ffffff;
+  text-transform: uppercase;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+html[data-theme="vice"] .game-wrap::before {
+  background:
+    radial-gradient(60% 40% at 30% 30%, rgba(255, 45, 149, .22), transparent 70%),
+    radial-gradient(50% 40% at 70% 75%, rgba(255, 138, 61, .20), transparent 70%);
+}
