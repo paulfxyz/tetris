@@ -19,7 +19,7 @@
 const KEY = 'tetris:settings';
 
 const DEFAULTS = {
-  theme: 'modern',     // classic | color | modern | vice
+  theme: 'vice',       // classic | color | modern | vice (default since v1.5.8)
   mode: 'dark',        // dark | light
   zoom: 100,           // %  (60..160)
   fit: false,          // auto-fit to viewport on load
@@ -52,6 +52,13 @@ export const settings = {
 function load() {
   try {
     const raw = JSON.parse(localStorage.getItem(KEY) || '{}');
+    // v1.5.8 — one-time migration: Vice became the default theme. Any save
+    // still on the old default ('modern') is moved to Vice once, then the
+    // `viceDefault` flag stops it from ever overriding the user's choice again.
+    if (!raw.viceDefault) {
+      if (raw.theme === 'modern') raw.theme = 'vice';
+      raw.viceDefault = true;
+    }
     return { ...DEFAULTS, ...raw, identity: { ...DEFAULTS.identity, ...(raw.identity || {}) } };
   } catch {
     return { ...DEFAULTS };

@@ -2,6 +2,12 @@
 
 All notable changes to **tetris** will be documented here. Format inspired by [Keep a Changelog](https://keepachangelog.com/), versioning follows [SemVer](https://semver.org/).
 
+## [1.5.8] — 2026-11-17
+
+### Changed
+- **Vice is now the default theme.** New visitors land on Vice (dark). `DEFAULTS.theme` in `storage.js` and the `<html data-theme>` attribute in `index.html` both switched from `modern` to `vice`, so the first paint already uses Vice before JavaScript runs.
+- **One-time migration for returning visitors.** Saved settings still on the old default (`modern`) are moved to Vice once. A `viceDefault` flag is written alongside, so the migration never runs again and any theme picked after that is respected. Classic and Color saves are left untouched.
+
 ## [1.5.7] — 2026-11-17
 
 ### Added
